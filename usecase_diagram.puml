@@ -8,13 +8,16 @@
 ' the system for tracking inventory across multiple warehouses.
 ' Actors: Warehouse Admin, Stocker, System (automated)
 ' ============================================================
-' Layout strategy: top-to-bottom direction with actors
-' spread across the top/sides. Packages are ordered so that
-' each actor's use cases are clustered nearby, minimizing
-' line crossings.
+' Layout strategy: left-to-right direction. Actors are on the
+' left, stacked vertically in three rows:
+'   TOP    = Warehouse Admin → admin-only packages
+'   MIDDLE = Stocker → day-to-day stock packages
+'   BOTTOM = System → logging & notification packages
+' Each actor's lines flow horizontally to its own row of
+' packages, minimizing crossover.
 ' ============================================================
 
-top to bottom direction
+left to right direction
 skinparam packageStyle rectangle
 skinparam actorStyle awesome
 skinparam usecase {
@@ -42,64 +45,26 @@ actor "System" as system
 ' Admin inherits all Stocker capabilities
 admin --|> stocker
 
+' Stack actors vertically: Admin top, Stocker middle, System bottom
+admin -[hidden]down- stocker
+stocker -[hidden]down- system
+
 ' ============================================================
 ' USE CASE PACKAGES
 ' ============================================================
-' Packages are ordered so that:
-'   - Stocker-connected packages (Auth, Stock Mgmt, History)
-'     are grouped in the center, close to the Stocker actor.
-'   - Admin-only packages (Item Mgmt, Warehouse Config,
-'     User Mgmt) are on one side, close to Admin.
-'   - System packages (Logging, Notifications) are near
-'     the System actor.
+' Three horizontal rows, each aligned with its primary actor:
+'
+'  Row 1 (Admin):   Item Mgmt → Warehouse Mgmt → User Mgmt
+'  Row 2 (Stocker): Authentication → Stock Mgmt → Activity History
+'  Row 3 (System):  Analytics & Notifications
+'
 ' ============================================================
 
 rectangle "Inventory Management System" {
 
-    ' --------------------------------------------------------
-    ' Authentication
-    ' --------------------------------------------------------
-    ' All users must authenticate before accessing the system.
-    ' Placed first so both actors connect cleanly at the top.
-    ' --------------------------------------------------------
-    package "Authentication" {
-        usecase "Log In" as UC_Login
-        usecase "Log Out" as UC_Logout
-    }
-
-    ' --------------------------------------------------------
-    ' Warehouse Stock Management
-    ' --------------------------------------------------------
-    ' Day-to-day operations: adding received shipments,
-    ' removing items taken from the warehouse, and
-    ' transferring stock between warehouses.
-    ' Barcode scanning speeds up item identification.
-    ' Placed directly below Auth — Stocker's primary area.
-    ' --------------------------------------------------------
-    package "Warehouse Stock Management" {
-        usecase "Add Items to Stock" as UC_AddStock
-        usecase "Remove Items from Stock" as UC_RemoveStock
-        usecase "Move Items Between\nWarehouses" as UC_MoveStock
-        usecase "Select Warehouse" as UC_SelectWarehouse
-        usecase "Scan Item Barcode" as UC_ScanBarcode
-        usecase "Enter Item Quantity" as UC_EnterQty
-
-        ' Adding/Removing stock requires selecting a warehouse,
-        ' scanning the barcode, and entering a quantity.
-        UC_AddStock ..> UC_SelectWarehouse : <<include>>
-        UC_AddStock ..> UC_ScanBarcode : <<include>>
-        UC_AddStock ..> UC_EnterQty : <<include>>
-
-        UC_RemoveStock ..> UC_SelectWarehouse : <<include>>
-        UC_RemoveStock ..> UC_ScanBarcode : <<include>>
-        UC_RemoveStock ..> UC_EnterQty : <<include>>
-
-        ' Moving stock automatically increases the destination
-        ' warehouse count and decreases the source warehouse count.
-        UC_MoveStock ..> UC_SelectWarehouse : <<include>>
-        UC_MoveStock ..> UC_ScanBarcode : <<include>>
-        UC_MoveStock ..> UC_EnterQty : <<include>>
-    }
+    ' ======================
+    ' ROW 1 — Admin packages
+    ' ======================
 
     ' --------------------------------------------------------
     ' Item Management (CRUD on item definitions)
@@ -109,19 +74,12 @@ rectangle "Inventory Management System" {
     ' Each item has: name, description, SKU, category,
     ' and optional custom metadata (JSON).
     ' Categories: Straw, Cup, Lid, Toy/Merch/Swag, Ingredients
-    ' Admin-only package — placed near other admin packages.
     ' --------------------------------------------------------
     package "Item Management" {
         usecase "Create New Item" as UC_CreateItem
         usecase "Edit Item Details" as UC_EditItem
         usecase "Delete Item" as UC_DeleteItem
         usecase "Manage Item Categories" as UC_ManageCategories
-
-        ' Deleting an item may cascade or prompt
-        ' the admin for a resolution if stock exists
-        usecase "Handle Deletion\n(Cascade / Resolve Stock)" as UC_HandleDeletion
-
-        UC_DeleteItem ..> UC_HandleDeletion : <<include>>
     }
 
     ' --------------------------------------------------------
@@ -129,7 +87,6 @@ rectangle "Inventory Management System" {
     ' --------------------------------------------------------
     ' Admins configure warehouses (shops, storage facilities)
     ' and their internal locations (aisles, shelves, zones).
-    ' Admin-only — grouped with Item Management.
     ' --------------------------------------------------------
     package "Warehouse & Location Management" {
         usecase "Add Warehouse" as UC_AddWarehouse
@@ -147,13 +104,60 @@ rectangle "Inventory Management System" {
     ' Users have: Name, Email, Password, Admin flag.
     ' Access management controls who can access what
     ' and at what permission level.
-    ' Admin-only — grouped with other admin packages.
     ' --------------------------------------------------------
     package "User & Access Management" {
         usecase "Manage Users" as UC_ManageUsers
         usecase "Set User Access Level" as UC_SetAccess
 
         UC_ManageUsers ..> UC_SetAccess : <<include>>
+    }
+
+    ' ======================
+    ' ROW 2 — Stocker packages
+    ' ======================
+
+    ' --------------------------------------------------------
+    ' Authentication
+    ' --------------------------------------------------------
+    ' All users must authenticate before accessing the system.
+    ' --------------------------------------------------------
+    package "Authentication" {
+        usecase "Log In" as UC_Login
+        usecase "Log Out" as UC_Logout
+    }
+
+    ' --------------------------------------------------------
+    ' Warehouse Stock Management
+    ' --------------------------------------------------------
+    ' Day-to-day operations: adding received shipments,
+    ' removing items taken from the warehouse, and
+    ' transferring stock between warehouses.
+    ' Barcode scanning speeds up item identification.
+    ' --------------------------------------------------------
+    package "Warehouse Stock Management" {
+        usecase "Add Items to Stock" as UC_AddStock
+        usecase "Remove Items from Stock" as UC_RemoveStock
+        usecase "Move Items Between\nWarehouses" as UC_MoveStock
+        usecase "Select Warehouse" as UC_SelectWarehouse
+        usecase "Scan Item Barcode" as UC_ScanBarcode
+        usecase "Enter Item Quantity" as UC_EnterQty
+
+        ' Adding stock requires selecting a warehouse,
+        ' scanning the barcode, and entering a quantity.
+        UC_AddStock ..> UC_SelectWarehouse : <<include>>
+        UC_AddStock ..> UC_ScanBarcode : <<include>>
+        UC_AddStock ..> UC_EnterQty : <<include>>
+
+        ' Removing stock follows the same steps.
+        UC_RemoveStock ..> UC_SelectWarehouse : <<include>>
+        UC_RemoveStock ..> UC_ScanBarcode : <<include>>
+        UC_RemoveStock ..> UC_EnterQty : <<include>>
+
+        ' Moving stock automatically increases the destination
+        ' warehouse and decreases the source warehouse.
+        UC_MoveStock ..> UC_SelectWarehouse : <<include>>
+        UC_MoveStock ..> UC_ScanBarcode : <<include>>
+        UC_MoveStock ..> UC_EnterQty : <<include>>
     }
 
     ' --------------------------------------------------------
@@ -164,7 +168,7 @@ rectangle "Inventory Management System" {
     '   - User account changes
     '   - Warehouse configuration changes
     ' History is searchable by date and filterable by user.
-    ' Stocker can view; System writes log entries.
+    ' Stocker can view history; System writes log entries.
     ' --------------------------------------------------------
     package "Activity & Audit Logging" {
         usecase "View Activity History" as UC_ViewHistory
@@ -179,13 +183,16 @@ rectangle "Inventory Management System" {
         UC_ViewHistory <.. UC_ViewUserActions : <<extend>>
     }
 
+    ' ======================
+    ' ROW 3 — System packages
+    ' ======================
+
     ' --------------------------------------------------------
     ' Analytics & Notifications
     ' --------------------------------------------------------
     ' Admins can view analytics dashboards and configure
     ' low-stock thresholds. The system automatically sends
     ' notifications when stock drops below a threshold.
-    ' Placed last — near System actor at the bottom.
     ' --------------------------------------------------------
     package "Analytics & Notifications" {
         usecase "View Warehouse Analytics" as UC_Analytics
@@ -199,69 +206,77 @@ rectangle "Inventory Management System" {
 }
 
 ' ============================================================
+' LAYOUT HINTS
+' ============================================================
+' Hidden links to keep rows aligned with their actors and
+' packages ordered left-to-right within each row.
+' ============================================================
+
+' Row 1 (Admin): Item Mgmt → Warehouse Mgmt → User Mgmt
+UC_ManageCategories -[hidden]right- UC_AddWarehouse
+UC_RemoveLocation -[hidden]right- UC_ManageUsers
+
+' Row 2 (Stocker): Auth → Stock Mgmt → Activity History
+UC_Logout -[hidden]right- UC_AddStock
+UC_MoveStock -[hidden]right- UC_ViewHistory
+
+' Vertical separation between rows
+UC_CreateItem -[hidden]down- UC_Login
+UC_AddWarehouse -[hidden]down- UC_AddStock
+UC_ViewHistory -[hidden]down- UC_Notify
+
+' ============================================================
 ' ACTOR - USE CASE ASSOCIATIONS
 ' ============================================================
-' Lines are grouped by actor and ordered to match the
-' vertical position of their target use cases, which
-' helps PlantUML route them with minimal crossing.
+' Each actor's lines flow horizontally right into its own
+' row of packages. The left-to-right layout keeps lines
+' short and parallel, avoiding crossover.
 ' ============================================================
 
-' --- Stocker associations ---
-' Stockers handle day-to-day stock operations and can
-' view activity history for their own actions.
-' These use cases are clustered in Auth, Stock Mgmt,
-' and History — all adjacent packages.
-stocker -- UC_Login
-stocker -- UC_Logout
-stocker -- UC_AddStock
-stocker -- UC_RemoveStock
-stocker -- UC_MoveStock
-stocker -- UC_ViewHistory
-
-' --- Warehouse Admin associations ---
+' --- Warehouse Admin associations (top row) ---
 ' Admins inherit Stocker use cases (via generalization)
 ' and additionally manage items, warehouses, users, 
 ' analytics, and notification settings.
-' These targets are in the admin-side packages.
-admin -- UC_CreateItem
-admin -- UC_EditItem
-admin -- UC_DeleteItem
-admin -- UC_ManageCategories
-admin -- UC_AddWarehouse
-admin -- UC_EditWarehouse
-admin -- UC_RemoveWarehouse
-admin -- UC_AddLocation
-admin -- UC_EditLocation
-admin -- UC_RemoveLocation
-admin -- UC_ManageUsers
-admin -- UC_Analytics
-admin -- UC_SetThreshold
+admin --> UC_CreateItem
+admin --> UC_EditItem
+admin --> UC_DeleteItem
+admin --> UC_ManageCategories
+admin --> UC_AddWarehouse
+admin --> UC_EditWarehouse
+admin --> UC_RemoveWarehouse
+admin --> UC_AddLocation
+admin --> UC_EditLocation
+admin --> UC_RemoveLocation
+admin --> UC_ManageUsers
+admin --> UC_Analytics
+admin --> UC_SetThreshold
 
-' --- System (automated) associations ---
+' --- Stocker associations (middle row) ---
+' Stockers handle day-to-day stock operations and can
+' view activity history for their own actions.
+stocker --> UC_Login
+stocker --> UC_Logout
+stocker --> UC_AddStock
+stocker --> UC_RemoveStock
+stocker --> UC_MoveStock
+stocker --> UC_ViewHistory
+
+' --- System associations (bottom row) ---
 ' The system actor handles automated logging and 
 ' notification delivery without human intervention.
-' Targets are in the bottom packages (Logging, Notifications).
-system -- UC_Notify
-system -- UC_LogStock
-system -- UC_LogUser
-system -- UC_LogWarehouse
+system --> UC_Notify
+system --> UC_LogStock
+system --> UC_LogUser
+system --> UC_LogWarehouse
 
 ' ============================================================
 ' Notes
 ' ============================================================
-' Notes placed on sides that face away from actor lines
-' to avoid visual clutter.
+' Notes placed on the right side of use cases (far end,
+' away from actor connection lines on the left).
 ' ============================================================
 
-note left of stocker
-    **Stocker**
-    Basic warehouse employee.
-    Manages day-to-day stock:
-    receiving shipments and
-    pulling items from storage.
-end note
-
-note left of admin
+note top of admin
     **Warehouse Admin**
     Full access including:
     - User management
@@ -271,20 +286,21 @@ note left of admin
     - Notification settings
 end note
 
-note left of UC_MoveStock
+note bottom of stocker
+    **Stocker**
+    Basic warehouse employee.
+    Manages day-to-day stock:
+    receiving shipments and
+    pulling items from storage.
+end note
+
+note right of UC_MoveStock
     Automatically adjusts stock:
     **Source warehouse**: decreased
     **Destination warehouse**: increased
 end note
 
-note bottom of UC_HandleDeletion
-    On item deletion:
-    - Cascade delete all stock records, OR
-    - Prompt admin to resolve 
-      non-empty stock first
-end note
-
-note left of UC_Notify
+note right of UC_Notify
     Triggered automatically when
     stock level falls below the
     configured threshold.
@@ -292,7 +308,7 @@ note left of UC_Notify
     limits per item/warehouse.
 end note
 
-note bottom of UC_LogStock
+note right of UC_LogStock
     All audit logs capture:
     - Timestamp
     - Action type
