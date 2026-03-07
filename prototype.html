@@ -1,0 +1,2068 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jason's Tea Shop — Inventory</title>
+    <style>
+        /* ============================================================
+           CSS RESET & VARIABLES
+           ============================================================ */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary: #2d6a4f;
+            --primary-light: #40916c;
+            --primary-dark: #1b4332;
+            --accent: #d4a373;
+            --accent-light: #e9c89b;
+            --danger: #d62828;
+            --danger-light: #f4a4a4;
+            --warning: #e9a820;
+            --warning-light: #fde49e;
+            --success: #2d6a4f;
+            --success-light: #b7e4c7;
+            --bg: #fafaf5;
+            --surface: #ffffff;
+            --surface-alt: #f0ede6;
+            --text: #1a1a1a;
+            --text-secondary: #6b6b6b;
+            --text-light: #999999;
+            --border: #e0ddd5;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-lg: 0 4px 12px rgba(0,0,0,0.12);
+            --radius: 12px;
+            --radius-sm: 8px;
+            --nav-height: 64px;
+            --header-height: 56px;
+            --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        html, body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            height: 100%;
+            overflow: hidden;
+        }
+
+        /* ============================================================
+           APP SHELL
+           ============================================================ */
+        #app {
+            max-width: 430px;
+            margin: 0 auto;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg);
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* ============================================================
+           HEADER
+           ============================================================ */
+        .app-header {
+            height: var(--header-height);
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            gap: 12px;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        .app-header h1 {
+            font-size: 17px;
+            font-weight: 600;
+            flex: 1;
+        }
+        .app-header .subtitle {
+            font-size: 11px;
+            opacity: 0.8;
+            font-weight: 400;
+        }
+        .header-btn {
+            background: none;
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .header-btn:hover { background: rgba(255,255,255,0.15); }
+        .back-btn { display: none; }
+        .app-header.with-back .back-btn { display: flex; }
+
+        /* ============================================================
+           MAIN CONTENT AREA
+           ============================================================ */
+        .app-body {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .screen {
+            display: none;
+            padding: 16px;
+            padding-bottom: calc(var(--nav-height) + 24px);
+            animation: fadeIn 0.2s ease;
+        }
+        .screen.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ============================================================
+           BOTTOM NAVIGATION
+           ============================================================ */
+        .bottom-nav {
+            height: var(--nav-height);
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2px;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            border: none;
+            background: none;
+            color: var(--text-light);
+            font-size: 10px;
+            font-family: var(--font);
+            transition: color 0.15s;
+        }
+        .nav-item .nav-icon { font-size: 22px; }
+        .nav-item.active { color: var(--primary); font-weight: 600; }
+        .nav-item:hover { color: var(--primary-light); }
+
+        /* ============================================================
+           LOGIN SCREEN
+           ============================================================ */
+        #login-screen {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 50%, var(--primary-light) 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 32px;
+        }
+        #login-screen.hidden { display: none; }
+        .login-logo {
+            font-size: 48px;
+            margin-bottom: 8px;
+        }
+        .login-title {
+            color: white;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .login-subtitle {
+            color: rgba(255,255,255,0.7);
+            font-size: 13px;
+            margin-bottom: 32px;
+        }
+        .login-card {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 28px 24px;
+            width: 100%;
+            max-width: 360px;
+            box-shadow: var(--shadow-lg);
+        }
+        .login-card h2 {
+            font-size: 18px;
+            margin-bottom: 20px;
+            color: var(--text);
+        }
+
+        /* ============================================================
+           FORM ELEMENTS
+           ============================================================ */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .form-input {
+            width: 100%;
+            padding: 12px 14px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 15px;
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            transition: border-color 0.15s;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        select.form-input {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b6b6b' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 32px;
+        }
+        textarea.form-input {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* ============================================================
+           BUTTONS
+           ============================================================ */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-weight: 600;
+            font-family: var(--font);
+            cursor: pointer;
+            transition: all 0.15s;
+            width: 100%;
+        }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary { background: var(--surface-alt); color: var(--text); }
+        .btn-secondary:hover { background: var(--border); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #b32020; }
+        .btn-warning { background: var(--warning); color: white; }
+        .btn-outline {
+            background: transparent;
+            color: var(--primary);
+            border: 1.5px solid var(--primary);
+        }
+        .btn-outline:hover { background: rgba(45,106,79,0.06); }
+        .btn-sm { padding: 8px 14px; font-size: 13px; width: auto; }
+        .btn-icon {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            border-radius: 50%;
+            font-size: 16px;
+        }
+        .btn-group { display: flex; gap: 8px; margin-top: 12px; }
+        .btn-group .btn { flex: 1; }
+
+        /* ============================================================
+           CARDS & LISTS
+           ============================================================ */
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 16px;
+            box-shadow: var(--shadow);
+            margin-bottom: 12px;
+        }
+        .card-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .card-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .list-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .list-item:hover { background: var(--surface-alt); }
+        .list-item:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+        .list-item:last-child { border-radius: 0 0 var(--radius) var(--radius); border-bottom: none; }
+        .list-item:only-child { border-radius: var(--radius); }
+        .list-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .list-content { flex: 1; min-width: 0; }
+        .list-title { font-size: 14px; font-weight: 600; }
+        .list-subtitle { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+        .list-badge {
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .list-arrow { color: var(--text-light); font-size: 14px; }
+
+        /* ============================================================
+           SECTION HEADERS
+           ============================================================ */
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--text-secondary);
+            padding: 20px 0 8px;
+        }
+        .section-title:first-child { padding-top: 4px; }
+
+        /* ============================================================
+           STATS / METRIC CARDS
+           ============================================================ */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .stat-card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 14px;
+            box-shadow: var(--shadow);
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+
+        /* ============================================================
+           BADGES & TAGS
+           ============================================================ */
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .badge-success { background: var(--success-light); color: var(--success); }
+        .badge-warning { background: var(--warning-light); color: #986a02; }
+        .badge-danger { background: var(--danger-light); color: var(--danger); }
+        .badge-info { background: #d0e7ff; color: #1a56a8; }
+        .badge-muted { background: var(--surface-alt); color: var(--text-secondary); }
+
+        .tag {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 12px;
+            background: var(--surface-alt);
+            color: var(--text-secondary);
+            margin-right: 6px;
+            margin-bottom: 6px;
+        }
+
+        /* ============================================================
+           ALERTS / NOTIFICATIONS BANNER
+           ============================================================ */
+        .alert {
+            padding: 12px 14px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+        .alert-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+        .alert-warning { background: var(--warning-light); color: #7a5600; }
+        .alert-danger { background: var(--danger-light); color: var(--danger); }
+        .alert-success { background: var(--success-light); color: var(--primary-dark); }
+
+        /* ============================================================
+           MODAL / DIALOG
+           ============================================================ */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.4);
+            z-index: 500;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--surface);
+            border-radius: 20px 20px 0 0;
+            padding: 24px;
+            width: 100%;
+            max-width: 430px;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: slideUp 0.25s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .modal-handle {
+            width: 36px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            margin: 0 auto 16px;
+        }
+        .modal h3 {
+            font-size: 18px;
+            margin-bottom: 16px;
+        }
+
+        /* ============================================================
+           TABS
+           ============================================================ */
+        .tabs {
+            display: flex;
+            background: var(--surface-alt);
+            border-radius: var(--radius-sm);
+            padding: 3px;
+            margin-bottom: 16px;
+        }
+        .tab {
+            flex: 1;
+            padding: 8px;
+            text-align: center;
+            font-size: 13px;
+            font-weight: 600;
+            border: none;
+            background: none;
+            cursor: pointer;
+            border-radius: 6px;
+            color: var(--text-secondary);
+            font-family: var(--font);
+            transition: all 0.15s;
+        }
+        .tab.active {
+            background: var(--surface);
+            color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        /* ============================================================
+           SEARCH BAR
+           ============================================================ */
+        .search-bar {
+            position: relative;
+            margin-bottom: 16px;
+        }
+        .search-bar input {
+            width: 100%;
+            padding: 10px 14px 10px 38px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 14px;
+            font-family: var(--font);
+            background: var(--surface);
+        }
+        .search-bar input:focus { outline: none; border-color: var(--primary); }
+        .search-bar .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            font-size: 14px;
+        }
+
+        /* ============================================================
+           QUANTITY STEPPER
+           ============================================================ */
+        .qty-stepper {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            border: 1.5px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            width: fit-content;
+        }
+        .qty-stepper button {
+            width: 44px;
+            height: 44px;
+            border: none;
+            background: var(--surface-alt);
+            font-size: 18px;
+            cursor: pointer;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        .qty-stepper button:hover { background: var(--border); }
+        .qty-stepper input {
+            width: 60px;
+            height: 44px;
+            border: none;
+            text-align: center;
+            font-size: 16px;
+            font-weight: 600;
+            font-family: var(--font);
+            background: var(--surface);
+        }
+        .qty-stepper input:focus { outline: none; }
+
+        /* ============================================================
+           CHART PLACEHOLDER
+           ============================================================ */
+        .chart-placeholder {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 12px;
+        }
+        .chart-bar-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 8px;
+            height: 120px;
+            padding-top: 10px;
+        }
+        .chart-bar-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: flex-end;
+        }
+        .chart-bar {
+            width: 100%;
+            max-width: 32px;
+            border-radius: 4px 4px 0 0;
+            transition: height 0.3s;
+        }
+        .chart-bar-label {
+            font-size: 10px;
+            color: var(--text-secondary);
+            margin-top: 6px;
+        }
+        .chart-bar-value {
+            font-size: 10px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 4px;
+        }
+
+        /* ============================================================
+           SCANNER UI
+           ============================================================ */
+        .scanner-area {
+            background: #1a1a1a;
+            border-radius: var(--radius);
+            height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            position: relative;
+            overflow: hidden;
+        }
+        .scanner-frame {
+            width: 200px;
+            height: 120px;
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            position: relative;
+        }
+        .scanner-line {
+            position: absolute;
+            left: 4px;
+            right: 4px;
+            height: 2px;
+            background: var(--danger);
+            animation: scanLine 2s ease-in-out infinite;
+        }
+        @keyframes scanLine { 0%, 100% { top: 10%; } 50% { top: 85%; } }
+        .scanner-text {
+            color: rgba(255,255,255,0.6);
+            font-size: 12px;
+            margin-top: 12px;
+        }
+
+        /* ============================================================
+           FLOATING ACTION BUTTON
+           ============================================================ */
+        .fab {
+            position: fixed;
+            bottom: calc(var(--nav-height) + 20px);
+            right: calc(50% - 215px + 20px);
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            border: none;
+            box-shadow: 0 4px 12px rgba(45,106,79,0.4);
+            font-size: 24px;
+            cursor: pointer;
+            z-index: 50;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .fab.active { display: flex; }
+
+        /* ============================================================
+           TIMELINE / HISTORY
+           ============================================================ */
+        .timeline-item {
+            display: flex;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .timeline-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-top: 4px;
+            flex-shrink: 0;
+        }
+        .timeline-content { flex: 1; }
+        .timeline-action { font-size: 13px; font-weight: 500; }
+        .timeline-meta {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin-top: 3px;
+            display: flex;
+            gap: 12px;
+        }
+
+        /* ============================================================
+           TOGGLE SWITCH
+           ============================================================ */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+        }
+        .toggle-label { font-size: 14px; }
+        .toggle-sublabel { font-size: 12px; color: var(--text-secondary); }
+        .toggle {
+            width: 48px;
+            height: 28px;
+            border-radius: 14px;
+            background: var(--border);
+            cursor: pointer;
+            position: relative;
+            transition: background 0.2s;
+            border: none;
+        }
+        .toggle.on { background: var(--primary); }
+        .toggle::after {
+            content: '';
+            position: absolute;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: white;
+            top: 3px;
+            left: 3px;
+            transition: transform 0.2s;
+            box-shadow: var(--shadow);
+        }
+        .toggle.on::after { transform: translateX(20px); }
+
+        /* ============================================================
+           EMPTY STATE
+           ============================================================ */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; }
+        .empty-state p { font-size: 14px; }
+
+        /* ============================================================
+           UTILITY
+           ============================================================ */
+        .flex { display: flex; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; }
+        .gap-8 { gap: 8px; }
+        .gap-12 { gap: 12px; }
+        .mt-8 { margin-top: 8px; }
+        .mt-16 { margin-top: 16px; }
+        .mb-8 { margin-bottom: 8px; }
+        .mb-16 { margin-bottom: 16px; }
+        .text-center { text-align: center; }
+        .text-sm { font-size: 13px; }
+        .text-xs { font-size: 11px; }
+        .text-muted { color: var(--text-secondary); }
+        .fw-600 { font-weight: 600; }
+        .divider { height: 1px; background: var(--border); margin: 16px 0; }
+        .color-accent { color: var(--accent); }
+        .color-primary { color: var(--primary); }
+        .color-danger { color: var(--danger); }
+
+        /* Hide scrollbar but keep functionality */
+        .app-body::-webkit-scrollbar { width: 0; }
+        .app-body { scrollbar-width: none; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+
+    <!-- ================================================================
+         LOGIN SCREEN
+         ================================================================ -->
+    <div id="login-screen">
+        <div class="login-logo">🍵</div>
+        <div class="login-title">Jason's Tea Shop</div>
+        <div class="login-subtitle">Warehouse Inventory Management</div>
+        <div class="login-card">
+            <h2>Sign In</h2>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="form-input" id="login-email" placeholder="you@jasonsteashop.com" value="admin@jasonsteashop.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" class="form-input" id="login-password" placeholder="Enter password" value="password">
+            </div>
+            <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+            <p class="text-center text-sm text-muted mt-16">Demo: use any credentials</p>
+        </div>
+    </div>
+
+    <!-- ================================================================
+         APP HEADER
+         ================================================================ -->
+    <div class="app-header" id="app-header">
+        <button class="header-btn back-btn" onclick="goBack()" title="Back">←</button>
+        <div>
+            <h1 id="header-title">Dashboard</h1>
+        </div>
+        <button class="header-btn" onclick="doLogout()" title="Log Out">⏻</button>
+    </div>
+
+    <!-- ================================================================
+         MAIN CONTENT AREA — all screens rendered here
+         ================================================================ -->
+    <div class="app-body" id="app-body">
+
+        <!-- ============================================================
+             DASHBOARD SCREEN
+             ============================================================ -->
+        <div class="screen active" id="screen-dashboard">
+            <!-- Greeting -->
+            <div class="flex-between mb-16">
+                <div>
+                    <div class="text-sm text-muted">Welcome back,</div>
+                    <div class="fw-600" style="font-size:18px;" id="greeting-name">Admin</div>
+                </div>
+                <div class="badge badge-success">Admin</div>
+            </div>
+
+            <!-- Low stock alerts -->
+            <div id="dashboard-alerts">
+                <div class="alert alert-warning">
+                    <span class="alert-icon">⚠️</span>
+                    <div>
+                        <strong>Low Stock Alert:</strong> Boba Straws at Main Storage — only <strong>12</strong> left (threshold: 50)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Warehouses</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">24</div>
+                    <div class="stat-label">Items</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">1,248</div>
+                    <div class="stat-label">Total Stock</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">4</div>
+                    <div class="stat-label">Users</div>
+                </div>
+            </div>
+
+            <!-- Quick actions -->
+            <div class="section-title">Quick Actions</div>
+            <div class="stats-grid">
+                <button class="btn btn-primary" onclick="navigateTo('screen-stock', 'Stock Management')">📦 Manage Stock</button>
+                <button class="btn btn-outline" onclick="navigateTo('screen-items', 'Items')">🏷️ View Items</button>
+            </div>
+
+            <!-- Recent activity -->
+            <div class="section-title">Recent Activity</div>
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="timeline-item" style="padding:12px 16px;">
+                    <div class="timeline-dot" style="background:var(--success);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Added 50× Large Cups to Main Storage</div>
+                        <div class="timeline-meta"><span>👤 Sarah K.</span><span>🕐 10 min ago</span></div>
+                    </div>
+                </div>
+                <div class="timeline-item" style="padding:12px 16px;">
+                    <div class="timeline-dot" style="background:var(--danger);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Removed 20× Boba Straws from Downtown Shop</div>
+                        <div class="timeline-meta"><span>👤 Jason L.</span><span>🕐 25 min ago</span></div>
+                    </div>
+                </div>
+                <div class="timeline-item" style="padding:12px 16px;">
+                    <div class="timeline-dot" style="background:var(--accent);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Moved 30× Lids from Storage → Uptown Shop</div>
+                        <div class="timeline-meta"><span>👤 Mike R.</span><span>🕐 1 hr ago</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             STOCK MANAGEMENT SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-stock">
+            <!-- Warehouse selector -->
+            <div class="form-group">
+                <label>Select Warehouse</label>
+                <select class="form-input" id="stock-warehouse">
+                    <option value="">Choose a warehouse...</option>
+                    <option value="main-storage" selected>Main Storage</option>
+                    <option value="downtown-shop">Downtown Shop</option>
+                    <option value="uptown-shop">Uptown Shop</option>
+                </select>
+            </div>
+
+            <!-- Stock action tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchStockTab('add', this)">Add Stock</button>
+                <button class="tab" onclick="switchStockTab('remove', this)">Remove Stock</button>
+                <button class="tab" onclick="switchStockTab('move', this)">Move Stock</button>
+            </div>
+
+            <!-- Barcode scanner -->
+            <div class="scanner-area" onclick="simulateScan()">
+                <div class="scanner-frame">
+                    <div class="scanner-line"></div>
+                </div>
+                <div class="scanner-text">Tap to simulate barcode scan</div>
+            </div>
+
+            <!-- Scanned item result (hidden initially) -->
+            <div id="scanned-item" style="display:none;">
+                <div class="card">
+                    <div class="flex-between">
+                        <div>
+                            <div class="list-title" id="scanned-item-name">Large Cups</div>
+                            <div class="list-subtitle" id="scanned-item-sku">SKU: CUP-LG-001</div>
+                        </div>
+                        <span class="badge badge-info" id="scanned-item-category">Cup</span>
+                    </div>
+                    <div class="divider"></div>
+
+                    <!-- Quantity stepper -->
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <div class="qty-stepper">
+                            <button onclick="adjustQty(-1)">−</button>
+                            <input type="number" id="stock-qty" value="1" min="1">
+                            <button onclick="adjustQty(1)">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Destination warehouse (for Move tab) -->
+                    <div class="form-group" id="move-destination" style="display:none;">
+                        <label>Move To Warehouse</label>
+                        <select class="form-input" id="dest-warehouse">
+                            <option value="downtown-shop">Downtown Shop</option>
+                            <option value="uptown-shop">Uptown Shop</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary" id="stock-action-btn" onclick="submitStockAction()">
+                        ➕ Add to Stock
+                    </button>
+                </div>
+            </div>
+
+            <!-- Current stock at selected warehouse -->
+            <div class="section-title">Current Stock at Warehouse</div>
+            <div id="warehouse-stock-list">
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--accent-light);">🥤</div>
+                    <div class="list-content">
+                        <div class="list-title">Large Cups</div>
+                        <div class="list-subtitle">CUP-LG-001 · Cup</div>
+                    </div>
+                    <span class="badge badge-success">150</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--warning-light);">🥤</div>
+                    <div class="list-content">
+                        <div class="list-title">Boba Straws</div>
+                        <div class="list-subtitle">STR-BB-001 · Straw</div>
+                    </div>
+                    <span class="badge badge-danger">12</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--success-light);">🫖</div>
+                    <div class="list-content">
+                        <div class="list-title">Jasmine Tea Leaves</div>
+                        <div class="list-subtitle">ING-JT-001 · Ingredient</div>
+                    </div>
+                    <span class="badge badge-success">85</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--accent-light);">🧢</div>
+                    <div class="list-content">
+                        <div class="list-title">Cup Lids (Large)</div>
+                        <div class="list-subtitle">LID-LG-001 · Lid</div>
+                    </div>
+                    <span class="badge badge-success">200</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:#f0d0e8;">🐱</div>
+                    <div class="list-content">
+                        <div class="list-title">Hello Kitty Cup Charm</div>
+                        <div class="list-subtitle">MRC-HK-001 · Merch</div>
+                    </div>
+                    <span class="badge badge-warning">28</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             ITEMS SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-items">
+            <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" placeholder="Search items..." onkeyup="filterItems(this.value)">
+            </div>
+
+            <!-- Category filter -->
+            <div class="mb-16" style="overflow-x:auto; white-space:nowrap;">
+                <button class="tag" style="background:var(--primary);color:white;" onclick="filterCategory('all', this)">All</button>
+                <button class="tag" onclick="filterCategory('cup', this)">🥤 Cup</button>
+                <button class="tag" onclick="filterCategory('straw', this)">🥤 Straw</button>
+                <button class="tag" onclick="filterCategory('lid', this)">🧢 Lid</button>
+                <button class="tag" onclick="filterCategory('ingredient', this)">🫖 Ingredient</button>
+                <button class="tag" onclick="filterCategory('merch', this)">🎁 Merch</button>
+            </div>
+
+            <div id="items-list">
+                <!-- Items rendered by JS -->
+            </div>
+
+            <button class="btn btn-primary mt-16" onclick="openModal('modal-item')">
+                ＋ Create New Item
+            </button>
+        </div>
+
+        <!-- ============================================================
+             ITEM DETAIL SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-item-detail">
+            <div class="card">
+                <div class="flex-between mb-8">
+                    <span class="badge badge-info" id="detail-category">Cup</span>
+                    <span class="text-xs text-muted" id="detail-sku">SKU: CUP-LG-001</span>
+                </div>
+                <h2 id="detail-name" style="font-size:20px; margin-bottom:8px;">Large Cups</h2>
+                <p class="text-sm text-muted" id="detail-desc">16oz large cups for cold and hot beverages. BPA-free plastic.</p>
+
+                <div class="divider"></div>
+
+                <div class="section-title" style="padding-top:0;">Stock by Warehouse</div>
+                <div id="detail-stock-list">
+                    <div class="flex-between" style="padding:8px 0;">
+                        <span class="text-sm">Main Storage</span>
+                        <span class="badge badge-success">150</span>
+                    </div>
+                    <div class="flex-between" style="padding:8px 0;">
+                        <span class="text-sm">Downtown Shop</span>
+                        <span class="badge badge-success">45</span>
+                    </div>
+                    <div class="flex-between" style="padding:8px 0;">
+                        <span class="text-sm">Uptown Shop</span>
+                        <span class="badge badge-warning">22</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="openModal('modal-item', true)">✏️ Edit</button>
+                <button class="btn btn-danger" onclick="confirmDelete('item')">🗑️ Delete</button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             WAREHOUSES SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-warehouses">
+            <div id="warehouses-list">
+                <!-- Rendered by JS -->
+            </div>
+            <button class="btn btn-primary mt-16" onclick="openModal('modal-warehouse')">
+                ＋ Add Warehouse
+            </button>
+        </div>
+
+        <!-- ============================================================
+             WAREHOUSE DETAIL SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-warehouse-detail">
+            <div class="card">
+                <h2 id="wh-detail-name" style="font-size:20px; margin-bottom:4px;">Main Storage</h2>
+                <p class="text-sm text-muted" id="wh-detail-address">123 Warehouse Ave, Suite B</p>
+                <div class="divider"></div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="wh-detail-items">5</div>
+                        <div class="stat-label">Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="wh-detail-stock">475</div>
+                        <div class="stat-label">Total Stock</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Locations section -->
+            <div class="section-title">Stock Locations</div>
+            <div id="wh-locations-list">
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--success-light);">📍</div>
+                    <div class="list-content">
+                        <div class="list-title">Aisle A — Cups & Lids</div>
+                        <div class="list-subtitle">Shelves 1–4</div>
+                    </div>
+                    <span class="list-arrow">›</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--accent-light);">📍</div>
+                    <div class="list-content">
+                        <div class="list-title">Aisle B — Straws & Utensils</div>
+                        <div class="list-subtitle">Shelves 1–3</div>
+                    </div>
+                    <span class="list-arrow">›</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--warning-light);">📍</div>
+                    <div class="list-content">
+                        <div class="list-title">Cold Room — Ingredients</div>
+                        <div class="list-subtitle">Refrigerated section</div>
+                    </div>
+                    <span class="list-arrow">›</span>
+                </div>
+            </div>
+
+            <button class="btn btn-outline mt-16" onclick="openModal('modal-location')">＋ Add Location</button>
+
+            <div class="btn-group mt-8">
+                <button class="btn btn-outline" onclick="openModal('modal-warehouse', true)">✏️ Edit</button>
+                <button class="btn btn-danger" onclick="confirmDelete('warehouse')">🗑️ Delete</button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             HISTORY SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-history">
+            <!-- Search / filter bar -->
+            <div class="flex gap-8 mb-16">
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <input type="date" class="form-input" id="history-date" style="font-size:13px;">
+                </div>
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <select class="form-input" id="history-user" style="font-size:13px;">
+                        <option value="">All Users</option>
+                        <option value="admin">Admin (Jason)</option>
+                        <option value="sarah">Sarah K.</option>
+                        <option value="mike">Mike R.</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="switchHistoryTab('all', this)">All</button>
+                <button class="tab" onclick="switchHistoryTab('stock', this)">Stock</button>
+                <button class="tab" onclick="switchHistoryTab('user', this)">Users</button>
+                <button class="tab" onclick="switchHistoryTab('warehouse', this)">Warehouses</button>
+            </div>
+
+            <div id="history-list">
+                <div class="timeline-item" data-type="stock">
+                    <div class="timeline-dot" style="background:var(--success);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Added 50× Large Cups</div>
+                        <div class="timeline-meta">
+                            <span>📦 Main Storage</span>
+                            <span>👤 Sarah K.</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Today, 10:30 AM</div>
+                    </div>
+                </div>
+                <div class="timeline-item" data-type="stock">
+                    <div class="timeline-dot" style="background:var(--danger);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Removed 20× Boba Straws</div>
+                        <div class="timeline-meta">
+                            <span>📦 Downtown Shop</span>
+                            <span>👤 Jason L.</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Today, 10:05 AM</div>
+                    </div>
+                </div>
+                <div class="timeline-item" data-type="stock">
+                    <div class="timeline-dot" style="background:var(--accent);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Moved 30× Lids: Main Storage → Uptown Shop</div>
+                        <div class="timeline-meta">
+                            <span>📦 Transfer</span>
+                            <span>👤 Mike R.</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Today, 9:15 AM</div>
+                    </div>
+                </div>
+                <div class="timeline-item" data-type="user">
+                    <div class="timeline-dot" style="background:#6c63ff;"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">New user created: Mike R. (Stocker)</div>
+                        <div class="timeline-meta">
+                            <span>👤 Admin</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Yesterday, 4:00 PM</div>
+                    </div>
+                </div>
+                <div class="timeline-item" data-type="warehouse">
+                    <div class="timeline-dot" style="background:#2196f3;"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Warehouse updated: Uptown Shop address changed</div>
+                        <div class="timeline-meta">
+                            <span>👤 Admin</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Yesterday, 2:30 PM</div>
+                    </div>
+                </div>
+                <div class="timeline-item" data-type="stock">
+                    <div class="timeline-dot" style="background:var(--success);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Added 100× Jasmine Tea Leaves</div>
+                        <div class="timeline-meta">
+                            <span>📦 Main Storage</span>
+                            <span>👤 Sarah K.</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Yesterday, 11:00 AM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             ANALYTICS SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-analytics">
+            <div class="tabs">
+                <button class="tab active" onclick="switchAnalyticsTab('warehouse', this)">Warehouses</button>
+                <button class="tab" onclick="switchAnalyticsTab('stock', this)">Stock</button>
+            </div>
+
+            <!-- Warehouse Analytics -->
+            <div id="analytics-warehouse">
+                <div class="card">
+                    <div class="card-title mb-8">Stock Distribution by Warehouse</div>
+                    <div class="chart-bar-container">
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">475</div>
+                            <div class="chart-bar" style="height:90%; background:var(--primary);"></div>
+                            <div class="chart-bar-label">Main Storage</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">312</div>
+                            <div class="chart-bar" style="height:60%; background:var(--primary-light);"></div>
+                            <div class="chart-bar-label">Downtown</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">185</div>
+                            <div class="chart-bar" style="height:35%; background:var(--accent);"></div>
+                            <div class="chart-bar-label">Uptown</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title mb-8">Warehouse Summary</div>
+                    <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
+                        <span class="text-sm">Total Warehouses</span>
+                        <span class="fw-600">3</span>
+                    </div>
+                    <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
+                        <span class="text-sm">Total Locations</span>
+                        <span class="fw-600">9</span>
+                    </div>
+                    <div class="flex-between" style="padding:8px 0;">
+                        <span class="text-sm">Active Users</span>
+                        <span class="fw-600">4</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Analytics -->
+            <div id="analytics-stock" style="display:none;">
+                <div class="card">
+                    <div class="card-title mb-8">Stock by Category</div>
+                    <div class="chart-bar-container">
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">340</div>
+                            <div class="chart-bar" style="height:85%; background:var(--primary);"></div>
+                            <div class="chart-bar-label">Cup</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">180</div>
+                            <div class="chart-bar" style="height:45%; background:var(--accent);"></div>
+                            <div class="chart-bar-label">Straw</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">290</div>
+                            <div class="chart-bar" style="height:72%; background:var(--primary-light);"></div>
+                            <div class="chart-bar-label">Lid</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">185</div>
+                            <div class="chart-bar" style="height:46%; background:var(--warning);"></div>
+                            <div class="chart-bar-label">Ingredient</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">78</div>
+                            <div class="chart-bar" style="height:20%; background:#e879a0;"></div>
+                            <div class="chart-bar-label">Merch</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title mb-8">Low Stock Items</div>
+                    <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
+                        <div>
+                            <div class="text-sm fw-600">Boba Straws</div>
+                            <div class="text-xs text-muted">Main Storage · Threshold: 50</div>
+                        </div>
+                        <span class="badge badge-danger">12</span>
+                    </div>
+                    <div class="flex-between" style="padding:8px 0;">
+                        <div>
+                            <div class="text-sm fw-600">Hello Kitty Charm</div>
+                            <div class="text-xs text-muted">Downtown · Threshold: 30</div>
+                        </div>
+                        <span class="badge badge-warning">28</span>
+                    </div>
+                </div>
+
+                <!-- Low stock threshold settings -->
+                <div class="section-title">Low Stock Thresholds</div>
+                <div class="card">
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-label">Enable Low Stock Alerts</div>
+                            <div class="toggle-sublabel">Get notified when stock drops below threshold</div>
+                        </div>
+                        <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="form-group">
+                        <label>Default Threshold</label>
+                        <div class="qty-stepper">
+                            <button onclick="adjustThreshold(-5)">−</button>
+                            <input type="number" id="default-threshold" value="50" min="1">
+                            <button onclick="adjustThreshold(5)">+</button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-muted">Items below this quantity will trigger a notification.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             USERS SCREEN (Admin only)
+             ============================================================ -->
+        <div class="screen" id="screen-users">
+            <div id="users-list">
+                <!-- Rendered by JS -->
+            </div>
+            <button class="btn btn-primary mt-16" onclick="openModal('modal-user')">
+                ＋ Add User
+            </button>
+        </div>
+
+        <!-- ============================================================
+             MORE SCREEN (overflow nav)
+             ============================================================ -->
+        <div class="screen" id="screen-more">
+            <div class="section-title" style="padding-top:4px;">Management</div>
+            <div class="list-item" onclick="navigateTo('screen-warehouses', 'Warehouses')">
+                <div class="list-icon" style="background:var(--success-light);">🏢</div>
+                <div class="list-content">
+                    <div class="list-title">Warehouses & Locations</div>
+                    <div class="list-subtitle">Manage warehouses and stock locations</div>
+                </div>
+                <span class="list-arrow">›</span>
+            </div>
+            <div class="list-item" onclick="navigateTo('screen-users', 'Users')">
+                <div class="list-icon" style="background:#d0e7ff;">👥</div>
+                <div class="list-content">
+                    <div class="list-title">Users & Access</div>
+                    <div class="list-subtitle">Manage users and access levels</div>
+                </div>
+                <span class="list-arrow">›</span>
+            </div>
+
+            <div class="section-title">Insights</div>
+            <div class="list-item" onclick="navigateTo('screen-analytics', 'Analytics')">
+                <div class="list-icon" style="background:var(--accent-light);">📊</div>
+                <div class="list-content">
+                    <div class="list-title">Analytics</div>
+                    <div class="list-subtitle">Warehouse and stock analytics</div>
+                </div>
+                <span class="list-arrow">›</span>
+            </div>
+            <div class="list-item" onclick="navigateTo('screen-history', 'Activity History')">
+                <div class="list-icon" style="background:var(--warning-light);">📋</div>
+                <div class="list-content">
+                    <div class="list-title">Activity History</div>
+                    <div class="list-subtitle">View logs and audit trail</div>
+                </div>
+                <span class="list-arrow">›</span>
+            </div>
+
+            <div class="section-title">Account</div>
+            <div class="list-item" onclick="doLogout()">
+                <div class="list-icon" style="background:var(--danger-light);">⏻</div>
+                <div class="list-content">
+                    <div class="list-title">Log Out</div>
+                    <div class="list-subtitle">Sign out of your account</div>
+                </div>
+                <span class="list-arrow">›</span>
+            </div>
+        </div>
+
+    </div><!-- end app-body -->
+
+    <!-- ================================================================
+         BOTTOM NAVIGATION BAR
+         ================================================================ -->
+    <nav class="bottom-nav" id="bottom-nav" style="display:none;">
+        <button class="nav-item active" onclick="switchNav('screen-dashboard', 'Dashboard', this)">
+            <span class="nav-icon">🏠</span>
+            <span>Home</span>
+        </button>
+        <button class="nav-item" onclick="switchNav('screen-stock', 'Stock Management', this)">
+            <span class="nav-icon">📦</span>
+            <span>Stock</span>
+        </button>
+        <button class="nav-item" onclick="switchNav('screen-items', 'Items', this)">
+            <span class="nav-icon">🏷️</span>
+            <span>Items</span>
+        </button>
+        <button class="nav-item" onclick="switchNav('screen-history', 'Activity History', this)">
+            <span class="nav-icon">📋</span>
+            <span>History</span>
+        </button>
+        <button class="nav-item" onclick="switchNav('screen-more', 'More', this)">
+            <span class="nav-icon">⋯</span>
+            <span>More</span>
+        </button>
+    </nav>
+
+</div><!-- end #app -->
+
+<!-- ====================================================================
+     MODALS
+     ==================================================================== -->
+
+<!-- Create / Edit Item Modal -->
+<div class="modal-overlay" id="modal-item">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <h3 id="modal-item-title">Create New Item</h3>
+        <div class="form-group">
+            <label>Item Name</label>
+            <input type="text" class="form-input" id="item-name" placeholder="e.g. Large Cups">
+        </div>
+        <div class="form-group">
+            <label>SKU</label>
+            <input type="text" class="form-input" id="item-sku" placeholder="e.g. CUP-LG-001">
+        </div>
+        <div class="form-group">
+            <label>Category</label>
+            <select class="form-input" id="item-category">
+                <option value="cup">🥤 Cup</option>
+                <option value="straw">🥤 Straw</option>
+                <option value="lid">🧢 Lid</option>
+                <option value="ingredient">🫖 Ingredient</option>
+                <option value="merch">🎁 Merch / Swag</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea class="form-input" id="item-desc" placeholder="Item description..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Custom Metadata (JSON) <span class="text-xs text-muted">— optional</span></label>
+            <textarea class="form-input" id="item-meta" placeholder='{"color": "pink", "size": "16oz"}' style="min-height:50px; font-family:monospace; font-size:12px;"></textarea>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeModal('modal-item')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveItem()">Save Item</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create / Edit Warehouse Modal -->
+<div class="modal-overlay" id="modal-warehouse">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <h3 id="modal-warehouse-title">Add Warehouse</h3>
+        <div class="form-group">
+            <label>Warehouse Name</label>
+            <input type="text" class="form-input" id="wh-name" placeholder="e.g. Main Storage">
+        </div>
+        <div class="form-group">
+            <label>Address</label>
+            <input type="text" class="form-input" id="wh-address" placeholder="e.g. 123 Warehouse Ave">
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeModal('modal-warehouse')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveWarehouse()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit Location Modal -->
+<div class="modal-overlay" id="modal-location">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <h3>Add Stock Location</h3>
+        <div class="form-group">
+            <label>Location Name</label>
+            <input type="text" class="form-input" id="loc-name" placeholder="e.g. Aisle A — Cups & Lids">
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <input type="text" class="form-input" id="loc-desc" placeholder="e.g. Shelves 1–4">
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeModal('modal-location')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveLocation()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit User Modal -->
+<div class="modal-overlay" id="modal-user">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <h3 id="modal-user-title">Add User</h3>
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" class="form-input" id="user-name" placeholder="e.g. Sarah Kim">
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" class="form-input" id="user-email" placeholder="sarah@jasonsteashop.com">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" class="form-input" id="user-password" placeholder="Enter password">
+        </div>
+        <div class="form-group">
+            <label>Access Level</label>
+            <select class="form-input" id="user-role">
+                <option value="stocker">Stocker — Manage stock only</option>
+                <option value="admin">Admin — Full access</option>
+            </select>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeModal('modal-user')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveUser()">Save User</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="modal-delete">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <h3>⚠️ Confirm Deletion</h3>
+        <p class="text-sm text-muted mb-16" id="delete-message">
+            Are you sure you want to delete this? This action cannot be undone.
+        </p>
+        <div class="card" id="delete-cascade-option" style="display:none;">
+            <div class="toggle-row">
+                <div>
+                    <div class="toggle-label">Cascade delete stock records</div>
+                    <div class="toggle-sublabel">Remove all stock entries across warehouses</div>
+                </div>
+                <button class="toggle on" id="cascade-toggle" onclick="this.classList.toggle('on')"></button>
+            </div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeModal('modal-delete')">Cancel</button>
+            <button class="btn btn-danger" onclick="executeDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" style="
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary-dark);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    box-shadow: var(--shadow-lg);
+    z-index: 9999;
+    display: none;
+    max-width: 380px;
+    text-align: center;
+"></div>
+
+
+<script>
+// ====================================================================
+// APP STATE
+// ====================================================================
+const state = {
+    loggedIn: false,
+    currentUser: null,
+    screenStack: ['screen-dashboard'],
+    currentStockTab: 'add',
+    deleteTarget: null,
+
+    // Demo data
+    items: [
+        { id: 1, name: 'Large Cups',           sku: 'CUP-LG-001', category: 'cup',        desc: '16oz large cups for cold and hot beverages. BPA-free plastic.', meta: '{"size":"16oz","material":"plastic"}',
+          stock: { 'main-storage': 150, 'downtown-shop': 45, 'uptown-shop': 22 }, threshold: 30 },
+        { id: 2, name: 'Small Cups',            sku: 'CUP-SM-001', category: 'cup',        desc: '12oz small cups for espresso-based drinks.', meta: '',
+          stock: { 'main-storage': 80, 'downtown-shop': 60, 'uptown-shop': 35 }, threshold: 30 },
+        { id: 3, name: 'Boba Straws',           sku: 'STR-BB-001', category: 'straw',      desc: 'Extra-wide straws for boba/bubble tea.', meta: '{"diameter":"12mm"}',
+          stock: { 'main-storage': 12, 'downtown-shop': 95, 'uptown-shop': 73 }, threshold: 50 },
+        { id: 4, name: 'Regular Straws',        sku: 'STR-RG-001', category: 'straw',      desc: 'Standard straws for iced drinks.', meta: '',
+          stock: { 'main-storage': 200, 'downtown-shop': 120, 'uptown-shop': 80 }, threshold: 50 },
+        { id: 5, name: 'Cup Lids (Large)',       sku: 'LID-LG-001', category: 'lid',        desc: 'Dome lids for 16oz cups.', meta: '',
+          stock: { 'main-storage': 200, 'downtown-shop': 55, 'uptown-shop': 35 }, threshold: 40 },
+        { id: 6, name: 'Cup Lids (Small)',       sku: 'LID-SM-001', category: 'lid',        desc: 'Flat lids for 12oz cups.', meta: '',
+          stock: { 'main-storage': 190, 'downtown-shop': 70, 'uptown-shop': 40 }, threshold: 40 },
+        { id: 7, name: 'Jasmine Tea Leaves',    sku: 'ING-JT-001', category: 'ingredient', desc: 'Premium jasmine green tea leaves, loose leaf.', meta: '{"origin":"China","organic":true}',
+          stock: { 'main-storage': 85, 'downtown-shop': 30, 'uptown-shop': 20 },  threshold: 25 },
+        { id: 8, name: 'Tapioca Pearls',        sku: 'ING-TP-001', category: 'ingredient', desc: 'Black tapioca pearls for boba drinks.', meta: '',
+          stock: { 'main-storage': 60, 'downtown-shop': 40, 'uptown-shop': 25 },  threshold: 20 },
+        { id: 9, name: 'Hello Kitty Cup Charm', sku: 'MRC-HK-001', category: 'merch',      desc: 'Collectible Hello Kitty cup charm, limited edition.', meta: '{"series":"Sanrio Collab"}',
+          stock: { 'main-storage': 28, 'downtown-shop': 15, 'uptown-shop': 10 },  threshold: 30 },
+    ],
+
+    warehouses: [
+        { id: 'main-storage',   name: 'Main Storage',   address: '123 Warehouse Ave, Suite B',
+          locations: [
+              { name: 'Aisle A — Cups & Lids',      desc: 'Shelves 1–4' },
+              { name: 'Aisle B — Straws & Utensils', desc: 'Shelves 1–3' },
+              { name: 'Cold Room — Ingredients',     desc: 'Refrigerated section' },
+          ]},
+        { id: 'downtown-shop',  name: 'Downtown Shop',  address: '456 Main St',
+          locations: [
+              { name: 'Back Storage',      desc: 'Behind counter' },
+              { name: 'Display Area',      desc: 'Front of shop' },
+              { name: 'Cold Storage',      desc: 'Mini fridge area' },
+          ]},
+        { id: 'uptown-shop',    name: 'Uptown Shop',    address: '789 Uptown Blvd, Unit 2',
+          locations: [
+              { name: 'Storage Closet',    desc: 'Main storage area' },
+              { name: 'Under Counter',     desc: 'Quick-access supplies' },
+              { name: 'Break Room',        desc: 'Extra stock overflow' },
+          ]},
+    ],
+
+    users: [
+        { id: 1, name: 'Jason Lee',  email: 'admin@jasonsteashop.com', role: 'admin' },
+        { id: 2, name: 'Sarah Kim',  email: 'sarah@jasonsteashop.com', role: 'stocker' },
+        { id: 3, name: 'Mike Rivera', email: 'mike@jasonsteashop.com', role: 'stocker' },
+        { id: 4, name: 'Lisa Chen',  email: 'lisa@jasonsteashop.com',  role: 'admin' },
+    ],
+};
+
+// ====================================================================
+// AUTHENTICATION
+// ====================================================================
+function doLogin() {
+    state.loggedIn = true;
+    state.currentUser = { name: 'Jason', role: 'admin' };
+    document.getElementById('login-screen').classList.add('hidden');
+    document.getElementById('bottom-nav').style.display = 'flex';
+    document.getElementById('greeting-name').textContent = state.currentUser.name;
+    renderItemsList();
+    renderWarehousesList();
+    renderUsersList();
+}
+
+function doLogout() {
+    state.loggedIn = false;
+    state.currentUser = null;
+    document.getElementById('login-screen').classList.remove('hidden');
+    document.getElementById('bottom-nav').style.display = 'none';
+    // Reset to dashboard
+    navigateTo('screen-dashboard', 'Dashboard');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    document.querySelector('.nav-item').classList.add('active');
+}
+
+// ====================================================================
+// NAVIGATION
+// ====================================================================
+function navigateTo(screenId, title) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(screenId).classList.add('active');
+    document.getElementById('header-title').textContent = title || screenId;
+
+    // Manage back button visibility
+    const mainScreens = ['screen-dashboard', 'screen-stock', 'screen-items', 'screen-history', 'screen-more'];
+    const header = document.getElementById('app-header');
+    if (mainScreens.includes(screenId)) {
+        header.classList.remove('with-back');
+        state.screenStack = [screenId];
+    } else {
+        header.classList.add('with-back');
+        state.screenStack.push(screenId);
+    }
+
+    // Scroll to top
+    document.getElementById('app-body').scrollTop = 0;
+}
+
+function switchNav(screenId, title, btn) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    btn.classList.add('active');
+    navigateTo(screenId, title);
+}
+
+function goBack() {
+    state.screenStack.pop();
+    const prev = state.screenStack[state.screenStack.length - 1] || 'screen-dashboard';
+    // Find the title for the previous screen
+    const titles = {
+        'screen-dashboard': 'Dashboard', 'screen-stock': 'Stock Management',
+        'screen-items': 'Items', 'screen-history': 'Activity History',
+        'screen-more': 'More', 'screen-warehouses': 'Warehouses',
+        'screen-users': 'Users', 'screen-analytics': 'Analytics',
+    };
+    navigateTo(prev, titles[prev] || 'Back');
+}
+
+// ====================================================================
+// STOCK MANAGEMENT
+// ====================================================================
+function switchStockTab(tab, btn) {
+    state.currentStockTab = tab;
+    document.querySelectorAll('#screen-stock .tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+
+    const actionBtn = document.getElementById('stock-action-btn');
+    const moveDest = document.getElementById('move-destination');
+
+    if (tab === 'add') {
+        actionBtn.textContent = '➕ Add to Stock';
+        actionBtn.className = 'btn btn-primary';
+        moveDest.style.display = 'none';
+    } else if (tab === 'remove') {
+        actionBtn.textContent = '➖ Remove from Stock';
+        actionBtn.className = 'btn btn-danger';
+        moveDest.style.display = 'none';
+    } else {
+        actionBtn.textContent = '🔄 Move Stock';
+        actionBtn.className = 'btn btn-warning';
+        moveDest.style.display = 'block';
+    }
+}
+
+function simulateScan() {
+    // Pick a random item to simulate scanning
+    const item = state.items[Math.floor(Math.random() * state.items.length)];
+    document.getElementById('scanned-item-name').textContent = item.name;
+    document.getElementById('scanned-item-sku').textContent = 'SKU: ' + item.sku;
+    document.getElementById('scanned-item-category').textContent = item.category.charAt(0).toUpperCase() + item.category.slice(1);
+    document.getElementById('scanned-item').style.display = 'block';
+    document.getElementById('stock-qty').value = 1;
+    showToast('✅ Barcode scanned: ' + item.name);
+}
+
+function adjustQty(delta) {
+    const input = document.getElementById('stock-qty');
+    const val = Math.max(1, parseInt(input.value || 1) + delta);
+    input.value = val;
+}
+
+function adjustThreshold(delta) {
+    const input = document.getElementById('default-threshold');
+    const val = Math.max(1, parseInt(input.value || 50) + delta);
+    input.value = val;
+}
+
+function submitStockAction() {
+    const wh = document.getElementById('stock-warehouse').value;
+    const qty = document.getElementById('stock-qty').value;
+    const itemName = document.getElementById('scanned-item-name').textContent;
+
+    if (!wh) { showToast('⚠️ Please select a warehouse first'); return; }
+
+    const whName = state.warehouses.find(w => w.id === wh)?.name || wh;
+
+    if (state.currentStockTab === 'add') {
+        showToast(`✅ Added ${qty}× ${itemName} to ${whName}`);
+    } else if (state.currentStockTab === 'remove') {
+        showToast(`✅ Removed ${qty}× ${itemName} from ${whName}`);
+    } else {
+        const dest = document.getElementById('dest-warehouse').value;
+        const destName = state.warehouses.find(w => w.id === dest)?.name || dest;
+        showToast(`✅ Moved ${qty}× ${itemName}: ${whName} → ${destName}`);
+    }
+
+    document.getElementById('scanned-item').style.display = 'none';
+}
+
+// ====================================================================
+// ITEMS
+// ====================================================================
+const catIcons = { cup: '🥤', straw: '🥤', lid: '🧢', ingredient: '🫖', merch: '🎁' };
+const catColors = { cup: '#e9c89b', straw: '#fde49e', lid: '#d0e7ff', ingredient: '#b7e4c7', merch: '#f0d0e8' };
+
+function renderItemsList(filter, category) {
+    const list = document.getElementById('items-list');
+    let items = state.items;
+    if (filter) {
+        const q = filter.toLowerCase();
+        items = items.filter(i => i.name.toLowerCase().includes(q) || i.sku.toLowerCase().includes(q));
+    }
+    if (category && category !== 'all') {
+        items = items.filter(i => i.category === category);
+    }
+
+    list.innerHTML = items.map(item => {
+        const totalStock = Object.values(item.stock).reduce((a, b) => a + b, 0);
+        const badgeClass = totalStock < item.threshold ? 'badge-danger' : totalStock < item.threshold * 2 ? 'badge-warning' : 'badge-success';
+        return `
+        <div class="list-item" onclick="viewItem(${item.id})">
+            <div class="list-icon" style="background:${catColors[item.category]}">${catIcons[item.category]}</div>
+            <div class="list-content">
+                <div class="list-title">${item.name}</div>
+                <div class="list-subtitle">${item.sku} · ${item.category.charAt(0).toUpperCase() + item.category.slice(1)}</div>
+            </div>
+            <span class="badge ${badgeClass}">${totalStock}</span>
+        </div>`;
+    }).join('');
+}
+
+function filterItems(q) { renderItemsList(q); }
+function filterCategory(cat, btn) {
+    document.querySelectorAll('#screen-items .tag').forEach(t => { t.style.background = ''; t.style.color = ''; });
+    btn.style.background = 'var(--primary)';
+    btn.style.color = 'white';
+    renderItemsList(null, cat);
+}
+
+function viewItem(id) {
+    const item = state.items.find(i => i.id === id);
+    if (!item) return;
+    document.getElementById('detail-name').textContent = item.name;
+    document.getElementById('detail-sku').textContent = 'SKU: ' + item.sku;
+    document.getElementById('detail-category').textContent = item.category.charAt(0).toUpperCase() + item.category.slice(1);
+    document.getElementById('detail-desc').textContent = item.desc;
+
+    const stockHtml = state.warehouses.map(wh => {
+        const qty = item.stock[wh.id] || 0;
+        const cls = qty < item.threshold ? 'badge-danger' : qty < item.threshold * 2 ? 'badge-warning' : 'badge-success';
+        return `<div class="flex-between" style="padding:8px 0;"><span class="text-sm">${wh.name}</span><span class="badge ${cls}">${qty}</span></div>`;
+    }).join('');
+    document.getElementById('detail-stock-list').innerHTML = stockHtml;
+
+    state.currentItemId = id;
+    navigateTo('screen-item-detail', item.name);
+}
+
+function saveItem() {
+    const name = document.getElementById('item-name').value;
+    if (!name) { showToast('⚠️ Item name is required'); return; }
+    showToast('✅ Item saved: ' + name);
+    closeModal('modal-item');
+    // Clear form
+    document.getElementById('item-name').value = '';
+    document.getElementById('item-sku').value = '';
+    document.getElementById('item-desc').value = '';
+    document.getElementById('item-meta').value = '';
+}
+
+// ====================================================================
+// WAREHOUSES
+// ====================================================================
+function renderWarehousesList() {
+    const list = document.getElementById('warehouses-list');
+    list.innerHTML = state.warehouses.map(wh => {
+        const totalStock = state.items.reduce((sum, item) => sum + (item.stock[wh.id] || 0), 0);
+        const itemCount = state.items.filter(item => (item.stock[wh.id] || 0) > 0).length;
+        return `
+        <div class="list-item" onclick="viewWarehouse('${wh.id}')">
+            <div class="list-icon" style="background:var(--success-light);">🏢</div>
+            <div class="list-content">
+                <div class="list-title">${wh.name}</div>
+                <div class="list-subtitle">${wh.address}</div>
+            </div>
+            <div style="text-align:right;">
+                <div class="text-sm fw-600">${totalStock}</div>
+                <div class="text-xs text-muted">${itemCount} items</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function viewWarehouse(id) {
+    const wh = state.warehouses.find(w => w.id === id);
+    if (!wh) return;
+    document.getElementById('wh-detail-name').textContent = wh.name;
+    document.getElementById('wh-detail-address').textContent = wh.address;
+
+    const totalStock = state.items.reduce((sum, item) => sum + (item.stock[wh.id] || 0), 0);
+    const itemCount = state.items.filter(item => (item.stock[wh.id] || 0) > 0).length;
+    document.getElementById('wh-detail-items').textContent = itemCount;
+    document.getElementById('wh-detail-stock').textContent = totalStock;
+
+    const locsHtml = wh.locations.map((loc, i) => {
+        const colors = ['var(--success-light)', 'var(--accent-light)', 'var(--warning-light)', '#d0e7ff', '#f0d0e8'];
+        return `
+        <div class="list-item">
+            <div class="list-icon" style="background:${colors[i % colors.length]};">📍</div>
+            <div class="list-content">
+                <div class="list-title">${loc.name}</div>
+                <div class="list-subtitle">${loc.desc}</div>
+            </div>
+            <span class="list-arrow">›</span>
+        </div>`;
+    }).join('');
+    document.getElementById('wh-locations-list').innerHTML = locsHtml;
+
+    state.currentWarehouseId = id;
+    navigateTo('screen-warehouse-detail', wh.name);
+}
+
+function saveWarehouse() {
+    const name = document.getElementById('wh-name').value;
+    if (!name) { showToast('⚠️ Warehouse name is required'); return; }
+    showToast('✅ Warehouse saved: ' + name);
+    closeModal('modal-warehouse');
+    document.getElementById('wh-name').value = '';
+    document.getElementById('wh-address').value = '';
+}
+
+function saveLocation() {
+    const name = document.getElementById('loc-name').value;
+    if (!name) { showToast('⚠️ Location name is required'); return; }
+    showToast('✅ Location saved: ' + name);
+    closeModal('modal-location');
+    document.getElementById('loc-name').value = '';
+    document.getElementById('loc-desc').value = '';
+}
+
+// ====================================================================
+// USERS
+// ====================================================================
+function renderUsersList() {
+    const list = document.getElementById('users-list');
+    list.innerHTML = state.users.map(user => `
+        <div class="list-item">
+            <div class="list-icon" style="background:${user.role === 'admin' ? 'var(--success-light)' : '#d0e7ff'};">
+                ${user.role === 'admin' ? '👑' : '👤'}
+            </div>
+            <div class="list-content">
+                <div class="list-title">${user.name}</div>
+                <div class="list-subtitle">${user.email}</div>
+            </div>
+            <span class="badge ${user.role === 'admin' ? 'badge-success' : 'badge-info'}">
+                ${user.role === 'admin' ? 'Admin' : 'Stocker'}
+            </span>
+        </div>
+    `).join('');
+}
+
+function saveUser() {
+    const name = document.getElementById('user-name').value;
+    if (!name) { showToast('⚠️ User name is required'); return; }
+    showToast('✅ User saved: ' + name);
+    closeModal('modal-user');
+    document.getElementById('user-name').value = '';
+    document.getElementById('user-email').value = '';
+    document.getElementById('user-password').value = '';
+}
+
+// ====================================================================
+// HISTORY FILTERING
+// ====================================================================
+function switchHistoryTab(type, btn) {
+    document.querySelectorAll('#screen-history .tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+
+    document.querySelectorAll('.timeline-item').forEach(item => {
+        if (type === 'all') {
+            item.style.display = 'flex';
+        } else {
+            item.style.display = item.dataset.type === type ? 'flex' : 'none';
+        }
+    });
+}
+
+// ====================================================================
+// ANALYTICS
+// ====================================================================
+function switchAnalyticsTab(tab, btn) {
+    document.querySelectorAll('#screen-analytics .tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('analytics-warehouse').style.display = tab === 'warehouse' ? 'block' : 'none';
+    document.getElementById('analytics-stock').style.display = tab === 'stock' ? 'block' : 'none';
+}
+
+// ====================================================================
+// MODALS
+// ====================================================================
+function openModal(id, isEdit) {
+    document.getElementById(id).classList.add('active');
+    // Update title for edit mode
+    if (id === 'modal-item') {
+        document.getElementById('modal-item-title').textContent = isEdit ? 'Edit Item' : 'Create New Item';
+    } else if (id === 'modal-warehouse') {
+        document.getElementById('modal-warehouse-title').textContent = isEdit ? 'Edit Warehouse' : 'Add Warehouse';
+    } else if (id === 'modal-user') {
+        document.getElementById('modal-user-title').textContent = isEdit ? 'Edit User' : 'Add User';
+    }
+}
+
+function closeModal(id) {
+    document.getElementById(id).classList.remove('active');
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) overlay.classList.remove('active');
+    });
+});
+
+// ====================================================================
+// DELETE CONFIRMATION (with cascade option)
+// ====================================================================
+function confirmDelete(type) {
+    state.deleteTarget = type;
+    const msg = document.getElementById('delete-message');
+    const cascade = document.getElementById('delete-cascade-option');
+
+    if (type === 'item') {
+        msg.textContent = 'Are you sure you want to delete this item? This will affect stock records across all warehouses.';
+        cascade.style.display = 'block';
+    } else if (type === 'warehouse') {
+        msg.textContent = 'Are you sure you want to delete this warehouse? All stock and location data will be affected.';
+        cascade.style.display = 'block';
+    } else {
+        msg.textContent = 'Are you sure you want to delete this? This action cannot be undone.';
+        cascade.style.display = 'none';
+    }
+    openModal('modal-delete');
+}
+
+function executeDelete() {
+    const cascade = document.getElementById('cascade-toggle').classList.contains('on');
+    if (state.deleteTarget === 'item') {
+        showToast(cascade ? '🗑️ Item and all stock records deleted' : '🗑️ Item deleted (stock preserved)');
+    } else if (state.deleteTarget === 'warehouse') {
+        showToast(cascade ? '🗑️ Warehouse and stock records deleted' : '🗑️ Warehouse deleted');
+    }
+    closeModal('modal-delete');
+    goBack();
+}
+
+// ====================================================================
+// TOAST NOTIFICATIONS
+// ====================================================================
+function showToast(message, duration = 2500) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.style.display = 'block';
+    clearTimeout(toast._timeout);
+    toast._timeout = setTimeout(() => { toast.style.display = 'none'; }, duration);
+}
+
+// ====================================================================
+// INIT
+// ====================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    renderItemsList();
+    renderWarehousesList();
+    renderUsersList();
+});
+</script>
+
+</body>
+</html>
