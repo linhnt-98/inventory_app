@@ -132,31 +132,31 @@ rectangle "Inventory Management System" {
     ' Day-to-day operations: adding received shipments,
     ' removing items taken from the warehouse, and
     ' transferring stock between warehouses.
-    ' Barcode scanning speeds up item identification.
+    ' Users search for items by name/SKU to identify them.
     ' --------------------------------------------------------
     package "Warehouse Stock Management" {
         usecase "Add Items to Stock" as UC_AddStock
         usecase "Remove Items from Stock" as UC_RemoveStock
         usecase "Move Items Between\nWarehouses" as UC_MoveStock
         usecase "Select Warehouse" as UC_SelectWarehouse
-        usecase "Scan Item Barcode" as UC_ScanBarcode
+        usecase "Search for Item" as UC_SearchItem
         usecase "Enter Item Quantity" as UC_EnterQty
 
         ' Adding stock requires selecting a warehouse,
-        ' scanning the barcode, and entering a quantity.
+        ' searching for the item, and entering a quantity.
         UC_AddStock ..> UC_SelectWarehouse : <<include>>
-        UC_AddStock ..> UC_ScanBarcode : <<include>>
+        UC_AddStock ..> UC_SearchItem : <<include>>
         UC_AddStock ..> UC_EnterQty : <<include>>
 
         ' Removing stock follows the same steps.
         UC_RemoveStock ..> UC_SelectWarehouse : <<include>>
-        UC_RemoveStock ..> UC_ScanBarcode : <<include>>
+        UC_RemoveStock ..> UC_SearchItem : <<include>>
         UC_RemoveStock ..> UC_EnterQty : <<include>>
 
         ' Moving stock automatically increases the destination
         ' warehouse and decreases the source warehouse.
         UC_MoveStock ..> UC_SelectWarehouse : <<include>>
-        UC_MoveStock ..> UC_ScanBarcode : <<include>>
+        UC_MoveStock ..> UC_SearchItem : <<include>>
         UC_MoveStock ..> UC_EnterQty : <<include>>
     }
 
