@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jason's Tea Shop — Inventory</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="app">
+
+    <!-- ================================================================
+         LOGIN SCREEN
+         ================================================================ -->
+    <div id="login-screen">
+        <div class="login-logo">🍵</div>
+        <div class="login-title">Jason's Tea Shop</div>
+        <div class="login-subtitle">Warehouse Inventory Management</div>
+        <div class="login-card">
+            <h2>Sign In</h2>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="email" class="form-input" id="login-email" placeholder="you@jasonsteashop.com" value="admin@jasonsteashop.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" class="form-input" id="login-password" placeholder="Enter password" value="password">
+            </div>
+            <button class="btn btn-primary" onclick="doLogin()">Sign In</button>
+            <p class="text-center text-sm text-muted mt-16">Demo: use any credentials</p>
+        </div>
+    </div>
+
+    <!-- ================================================================
+         APP HEADER
+         ================================================================ -->
+    <div class="app-header" id="app-header">
+        <button class="header-btn back-btn" onclick="goBack()" title="Back">←</button>
+        <div>
+            <h1 id="header-title">Dashboard</h1>
+        </div>
+        <button class="header-btn" onclick="doLogout()" title="Log Out">⏻</button>
+    </div>
+
+    <!-- ================================================================
+         MAIN CONTENT AREA — all screens rendered here
+         ================================================================ -->
+    <div class="app-body" id="app-body">
+
+        <!-- ============================================================
+             DASHBOARD SCREEN
+             ============================================================ -->
+        <div class="screen active" id="screen-dashboard">
+            <!-- Greeting -->
+            <div class="flex-between mb-16">
+                <div>
+                    <div class="text-sm text-muted">Welcome back,</div>
+                    <div class="fw-600" style="font-size:18px;" id="greeting-name">Admin</div>
+                </div>
+                <div class="badge badge-success">Admin</div>
+            </div>
+
+            <!-- Low stock alerts -->
+            <div id="dashboard-alerts">
+                <div class="alert alert-warning">
+                    <span class="alert-icon">⚠️</span>
+                    <div>
+                        <strong>Low Stock Alert:</strong> Boba Straws at Main Storage — only <strong>12</strong> left (threshold: 50)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick stats -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value">3</div>
+                    <div class="stat-label">Warehouses</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">24</div>
+                    <div class="stat-label">Items</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">1,248</div>
+                    <div class="stat-label">Total Stock</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">4</div>
+                    <div class="stat-label">Users</div>
+                </div>
+            </div>
+
+            <!-- Quick actions -->
+            <div class="section-title">Quick Actions</div>
+            <div class="stats-grid">
+                <button class="btn btn-primary" onclick="navigateTo('screen-stock', 'Stock Management')">📦 Manage Stock</button>
+                <button class="btn btn-outline" onclick="navigateTo('screen-items', 'Items')">🏷️ View Items</button>
+            </div>
+
+            <!-- Recent activity -->
+            <div class="section-title">Recent Activity</div>
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="timeline-item" style="padding:12px 16px;">
+                    <div class="timeline-dot" style="background:var(--success);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Added 50× Large Cups to Main Storage</div>
+                        <div class="timeline-meta"><span>👤 Sarah K.</span><span>🕐 10 min ago</span></div>
+                    </div>
+                </div>
+                <div class="timeline-item" style="padding:12px 16px;">
+                    <div class="timeline-dot" style="background:var(--danger);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Removed 20× Boba Straws from Downtown Shop</div>
+                        <div class="timeline-meta"><span>👤 Jason L.</span><span>🕐 25 min ago</span></div>
+                    </div>
+                </div>
+                <div class="timeline-item" style="padding:12px 16px;">
+                    <div class="timeline-dot" style="background:var(--accent);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Moved 30× Lids from Storage → Uptown Shop</div>
+                        <div class="timeline-meta"><span>👤 Mike R.</span><span>🕐 1 hr ago</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             STOCK MANAGEMENT SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-stock">
+            <!-- Warehouse selector -->
+            <div class="form-group">
+                <label>Select Warehouse</label>
+                <select class="form-input" id="stock-warehouse">
+                    <option value="">Choose a warehouse...</option>
+                    <option value="main-storage" selected>Main Storage</option>
+                    <option value="downtown-shop">Downtown Shop</option>
+                    <option value="uptown-shop">Uptown Shop</option>
+                </select>
+            </div>
+
+            <!-- Stock action tabs -->
+            <div class="tabs">
+                <button class="tab active" onclick="switchStockTab('add', this)">Add Stock</button>
+                <button class="tab" onclick="switchStockTab('remove', this)">Remove Stock</button>
+                <button class="tab" onclick="switchStockTab('move', this)">Move Stock</button>
+            </div>
+
+            <!-- Item search (replaces barcode scanner) -->
+            <div class="item-search-area">
+                <div class="search-bar">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="stock-search-input" placeholder="Search for an item by name, SKU, or category..." oninput="searchItems(this.value)">
+                </div>
+                <div class="search-results-dropdown" id="stock-search-results">
+                    <!-- Populated dynamically by searchItems() -->
+                </div>
+                <div class="search-hint">Type to search and select an item</div>
+            </div>
+
+            <!-- Selected item result (hidden initially) -->
+            <div id="selected-item" style="display:none;">
+                <div class="card">
+                    <div class="flex-between">
+                        <div>
+                            <div class="list-title" id="selected-item-name">Large Cups</div>
+                            <div class="list-subtitle" id="selected-item-sku">SKU: CUP-LG-001</div>
+                        </div>
+                        <div class="flex gap-8" style="align-items:center;">
+                            <span class="badge badge-info" id="selected-item-category">Cup</span>
+                            <button class="btn btn-icon btn-secondary" onclick="clearSelectedItem()" title="Clear selection" style="width:28px;height:28px;font-size:12px;">✕</button>
+                        </div>
+                    </div>
+                    <div class="divider"></div>
+
+                    <!-- Quantity stepper -->
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <div class="qty-stepper">
+                            <button onclick="adjustQty(-1)">−</button>
+                            <input type="number" id="stock-qty" value="1" min="1">
+                            <button onclick="adjustQty(1)">+</button>
+                        </div>
+                    </div>
+
+                    <!-- Destination warehouse (for Move tab) -->
+                    <div class="form-group" id="move-destination" style="display:none;">
+                        <label>Move To Warehouse</label>
+                        <select class="form-input" id="dest-warehouse">
+                            <option value="downtown-shop">Downtown Shop</option>
+                            <option value="uptown-shop">Uptown Shop</option>
+                        </select>
+                    </div>
+
+                    <button class="btn btn-primary" id="stock-action-btn" onclick="submitStockAction()">
+                        ➕ Add to Stock
+                    </button>
+                </div>
+            </div>
+
+            <!-- Current stock at selected warehouse -->
+            <div class="section-title">Current Stock at Warehouse</div>
+            <div id="warehouse-stock-list">
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--accent-light);">🥤</div>
+                    <div class="list-content">
+                        <div class="list-title">Large Cups</div>
+                        <div class="list-subtitle">CUP-LG-001 · Cup</div>
+                    </div>
+                    <span class="badge badge-success">150</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--warning-light);">🥤</div>
+                    <div class="list-content">
+                        <div class="list-title">Boba Straws</div>
+                        <div class="list-subtitle">STR-BB-001 · Straw</div>
+                    </div>
+                    <span class="badge badge-danger">12</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--success-light);">🫖</div>
+                    <div class="list-content">
+                        <div class="list-title">Jasmine Tea Leaves</div>
+                        <div class="list-subtitle">ING-JT-001 · Ingredient</div>
+                    </div>
+                    <span class="badge badge-success">85</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--accent-light);">🧢</div>
+                    <div class="list-content">
+                        <div class="list-title">Cup Lids (Large)</div>
+                        <div class="list-subtitle">LID-LG-001 · Lid</div>
+                    </div>
+                    <span class="badge badge-success">200</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:#f0d0e8;">🐱</div>
+                    <div class="list-content">
+                        <div class="list-title">Hello Kitty Cup Charm</div>
+                        <div class="list-subtitle">MRC-HK-001 · Merch</div>
+                    </div>
+                    <span class="badge badge-warning">28</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             ITEMS SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-items">
+            <div class="search-bar">
+                <span class="search-icon">🔍</span>
+                <input type="text" placeholder="Search items..." onkeyup="filterItems(this.value)">
+            </div>
+
+            <!-- Category filter -->
+            <div class="mb-16" style="overflow-x:auto; white-space:nowrap;">
+                <button class="tag" style="background:var(--primary);color:white;" onclick="filterCategory('all', this)">All</button>
+                <button class="tag" onclick="filterCategory('cup', this)">🥤 Cup</button>
+                <button class="tag" onclick="filterCategory('straw', this)">🥤 Straw</button>
+                <button class="tag" onclick="filterCategory('lid', this)">🧢 Lid</button>
+                <button class="tag" onclick="filterCategory('ingredient', this)">🫖 Ingredient</button>
+                <button class="tag" onclick="filterCategory('merch', this)">🎁 Merch</button>
+            </div>
+
+            <div id="items-list">
+                <!-- Items rendered by JS -->
+            </div>
+
+            <button class="btn btn-primary mt-16" onclick="openModal('modal-item')">
+                ＋ Create New Item
+            </button>
+        </div>
+
+        <!-- ============================================================
+             ITEM DETAIL SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-item-detail">
+            <div class="card">
+                <div class="flex-between mb-8">
+                    <span class="badge badge-info" id="detail-category">Cup</span>
+                    <span class="text-xs text-muted" id="detail-sku">SKU: CUP-LG-001</span>
+                </div>
+                <h2 id="detail-name" style="font-size:20px; margin-bottom:8px;">Large Cups</h2>
+                <p class="text-sm text-muted" id="detail-desc">16oz large cups for cold and hot beverages. BPA-free plastic.</p>
+
+                <div class="divider"></div>
+
+                <div class="section-title" style="padding-top:0;">Stock by Warehouse</div>
+                <div id="detail-stock-list">
+                    <div class="flex-between" style="padding:8px 0;">
+                        <span class="text-sm">Main Storage</span>
+                        <span class="badge badge-success">150</span>
+                    </div>
+                    <div class="flex-between" style="padding:8px 0;">
+                        <span class="text-sm">Downtown Shop</span>
+                        <span class="badge badge-success">45</span>
+                    </div>
+                    <div class="flex-between" style="padding:8px 0;">
+                        <span class="text-sm">Uptown Shop</span>
+                        <span class="badge badge-warning">22</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="btn-group">
+                <button class="btn btn-outline" onclick="openModal('modal-item', true)">✏️ Edit</button>
+                <button class="btn btn-danger" onclick="confirmDelete('item')">🗑️ Delete</button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             WAREHOUSES SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-warehouses">
+            <div id="warehouses-list">
+                <!-- Rendered by JS -->
+            </div>
+            <button class="btn btn-primary mt-16" onclick="openModal('modal-warehouse')">
+                ＋ Add Warehouse
+            </button>
+        </div>
+
+        <!-- ============================================================
+             WAREHOUSE DETAIL SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-warehouse-detail">
+            <div class="card">
+                <h2 id="wh-detail-name" style="font-size:20px; margin-bottom:4px;">Main Storage</h2>
+                <p class="text-sm text-muted" id="wh-detail-address">123 Warehouse Ave, Suite B</p>
+                <div class="divider"></div>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-value" id="wh-detail-items">5</div>
+                        <div class="stat-label">Items</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="wh-detail-stock">475</div>
+                        <div class="stat-label">Total Stock</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Locations section -->
+            <div class="section-title">Stock Locations</div>
+            <div id="wh-locations-list">
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--success-light);">📍</div>
+                    <div class="list-content">
+                        <div class="list-title">Aisle A — Cups & Lids</div>
+                        <div class="list-subtitle">Shelves 1–4</div>
+                    </div>
+                    <span class="list-arrow">›</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--accent-light);">📍</div>
+                    <div class="list-content">
+                        <div class="list-title">Aisle B — Straws & Utensils</div>
+                        <div class="list-subtitle">Shelves 1–3</div>
+                    </div>
+                    <span class="list-arrow">›</span>
+                </div>
+                <div class="list-item">
+                    <div class="list-icon" style="background:var(--warning-light);">📍</div>
+                    <div class="list-content">
+                        <div class="list-title">Cold Room — Ingredients</div>
+                        <div class="list-subtitle">Refrigerated section</div>
+                    </div>
+                    <span class="list-arrow">›</span>
+                </div>
+            </div>
+
+            <button class="btn btn-outline mt-16" onclick="openModal('modal-location')">＋ Add Location</button>
+
+            <div class="btn-group mt-8">
+                <button class="btn btn-outline" onclick="openModal('modal-warehouse', true)">✏️ Edit</button>
+                <button class="btn btn-danger" onclick="confirmDelete('warehouse')">🗑️ Delete</button>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             HISTORY SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-history">
+            <!-- Search / filter bar -->
+            <div class="flex gap-8 mb-16">
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <input type="date" class="form-input" id="history-date" style="font-size:13px;">
+                </div>
+                <div class="form-group" style="flex:1; margin-bottom:0;">
+                    <select class="form-input" id="history-user" style="font-size:13px;">
+                        <option value="">All Users</option>
+                        <option value="admin">Admin (Jason)</option>
+                        <option value="sarah">Sarah K.</option>
+                        <option value="mike">Mike R.</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="switchHistoryTab('all', this)">All</button>
+                <button class="tab" onclick="switchHistoryTab('stock', this)">Stock</button>
+                <button class="tab" onclick="switchHistoryTab('user', this)">Users</button>
+                <button class="tab" onclick="switchHistoryTab('warehouse', this)">Warehouses</button>
+            </div>
+
+            <div id="history-list">
+                <div class="timeline-item" data-type="stock">
+                    <div class="timeline-dot" style="background:var(--success);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Added 50× Large Cups</div>
+                        <div class="timeline-meta">
+                            <span>📦 Main Storage</span>
+                            <span>👤 Sarah K.</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Today, 10:30 AM</div>
+                    </div>
+                </div>
+                <div class="timeline-item" data-type="stock">
+                    <div class="timeline-dot" style="background:var(--danger);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Removed 20× Boba Straws</div>
+                        <div class="timeline-meta">
+                            <span>📦 Downtown Shop</span>
+                            <span>👤 Jason L.</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Today, 10:05 AM</div>
+                    </div>
+                </div>
+                <div class="timeline-item" data-type="stock">
+                    <div class="timeline-dot" style="background:var(--accent);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Moved 30× Lids: Main Storage → Uptown Shop</div>
+                        <div class="timeline-meta">
+                            <span>📦 Transfer</span>
+                            <span>👤 Mike R.</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Today, 9:15 AM</div>
+                    </div>
+                </div>
+                <div class="timeline-item" data-type="user">
+                    <div class="timeline-dot" style="background:#6c63ff;"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">New user created: Mike R. (Stocker)</div>
+                        <div class="timeline-meta">
+                            <span>👤 Admin</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Yesterday, 4:00 PM</div>
+                    </div>
+                </div>
+                <div class="timeline-item" data-type="warehouse">
+                    <div class="timeline-dot" style="background:#2196f3;"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Warehouse updated: Uptown Shop address changed</div>
+                        <div class="timeline-meta">
+                            <span>👤 Admin</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Yesterday, 2:30 PM</div>
+                    </div>
+                </div>
+                <div class="timeline-item" data-type="stock">
+                    <div class="timeline-dot" style="background:var(--success);"></div>
+                    <div class="timeline-content">
+                        <div class="timeline-action">Added 100× Jasmine Tea Leaves</div>
+                        <div class="timeline-meta">
+                            <span>📦 Main Storage</span>
+                            <span>👤 Sarah K.</span>
+                        </div>
+                        <div class="text-xs text-muted mt-8">Yesterday, 11:00 AM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             ANALYTICS SCREEN
+             ============================================================ -->
+        <div class="screen" id="screen-analytics">
+            <div class="tabs">
+                <button class="tab active" onclick="switchAnalyticsTab('warehouse', this)">Warehouses</button>
+                <button class="tab" onclick="switchAnalyticsTab('stock', this)">Stock</button>
+            </div>
+
+            <!-- Warehouse Analytics -->
+            <div id="analytics-warehouse">
+                <div class="card">
+                    <div class="card-title mb-8">Stock Distribution by Warehouse</div>
+                    <div class="chart-bar-container">
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">475</div>
+                            <div class="chart-bar" style="height:90%; background:var(--primary);"></div>
+                            <div class="chart-bar-label">Main Storage</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">312</div>
+                            <div class="chart-bar" style="height:60%; background:var(--primary-light);"></div>
+                            <div class="chart-bar-label">Downtown</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">185</div>
+                            <div class="chart-bar" style="height:35%; background:var(--accent);"></div>
+                            <div class="chart-bar-label">Uptown</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title mb-8">Warehouse Summary</div>
+                    <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
+                        <span class="text-sm">Total Warehouses</span>
+                        <span class="fw-600">3</span>
+                    </div>
+                    <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
+                        <span class="text-sm">Total Locations</span>
+                        <span class="fw-600">9</span>
+                    </div>
+                    <div class="flex-between" style="padding:8px 0;">
+                        <span class="text-sm">Active Users</span>
+                        <span class="fw-600">4</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stock Analytics -->
+            <div id="analytics-stock" style="display:none;">
+                <div class="card">
+                    <div class="card-title mb-8">Stock by Category</div>
+                    <div class="chart-bar-container">
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">340</div>
+                            <div class="chart-bar" style="height:85%; background:var(--primary);"></div>
+                            <div class="chart-bar-label">Cup</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">180</div>
+                            <div class="chart-bar" style="height:45%; background:var(--accent);"></div>
+                            <div class="chart-bar-label">Straw</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">290</div>
+                            <div class="chart-bar" style="height:72%; background:var(--primary-light);"></div>
+                            <div class="chart-bar-label">Lid</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">185</div>
+                            <div class="chart-bar" style="height:46%; background:var(--warning);"></div>
+                            <div class="chart-bar-label">Ingredient</div>
+                        </div>
+                        <div class="chart-bar-wrapper">
+                            <div class="chart-bar-value">78</div>
+                            <div class="chart-bar" style="height:20%; background:#e879a0;"></div>
+                            <div class="chart-bar-label">Merch</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title mb-8">Low Stock Items</div>
+                    <div class="flex-between" style="padding:8px 0; border-bottom:1px solid var(--border);">
+                        <div>
+                            <div class="text-sm fw-600">Boba Straws</div>
+                            <div class="text-xs text-muted">Main Storage · Threshold: 50</div>
+                        </div>
+                        <span class="badge badge-danger">12</span>
+                    </div>
+                    <div class="flex-between" style="padding:8px 0;">
+                        <div>
+                            <div class="text-sm fw-600">Hello Kitty Charm</div>
+                            <div class="text-xs text-muted">Downtown · Threshold: 30</div>
+                        </div>
+                        <span class="badge badge-warning">28</span>
+                    </div>
+                </div>
+
+                <!-- Low stock threshold settings -->
+                <div class="section-title">Low Stock Thresholds</div>
+                <div class="card">
+                    <div class="toggle-row">
+                        <div>
+                            <div class="toggle-label">Enable Low Stock Alerts</div>
+                            <div class="toggle-sublabel">Get notified when stock drops below threshold</div>
+                        </div>
+                        <button class="toggle on" onclick="this.classList.toggle('on')"></button>
+                    </div>
+                    <div class="divider"></div>
+                    <div class="form-group">
+                        <label>Default Threshold</label>
+                        <div class="qty-stepper">
+                            <button onclick="adjustThreshold(-5)">−</button>
+                            <input type="number" id="default-threshold" value="50" min="1">
+                            <button onclick="adjustThreshold(5)">+</button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-muted">Items below this quantity will trigger a notification.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================
+             USERS SCREEN (Admin only)
+             ============================================================ -->
+        <div class="screen" id="screen-users">
+            <div id="users-list">
+                <!-- Rendered by JS -->
+            </div>
+            <button class="btn btn-primary mt-16" onclick="openModal('modal-user')">
+                ＋ Add User
+            </button>
+        </div>
+
+        <!-- ============================================================
+             MORE SCREEN (overflow nav)
+             ============================================================ -->
+        <div class="screen" id="screen-more">
+            <div class="section-title" style="padding-top:4px;">Management</div>
+            <div class="list-item" onclick="navigateTo('screen-warehouses', 'Warehouses')">
+                <div class="list-icon" style="background:var(--success-light);">🏢</div>
+                <div class="list-content">
+                    <div class="list-title">Warehouses & Locations</div>
+                    <div class="list-subtitle">Manage warehouses and stock locations</div>
+                </div>
+                <span class="list-arrow">›</span>
+            </div>
+            <div class="list-item" onclick="navigateTo('screen-users', 'Users')">
+                <div class="list-icon" style="background:#d0e7ff;">👥</div>
+                <div class="list-content">
+                    <div class="list-title">Users & Access</div>
+                    <div class="list-subtitle">Manage users and access levels</div>
+                </div>
+                <span class="list-arrow">›</span>
+            </div>
+
+            <div class="section-title">Insights</div>
+            <div class="list-item" onclick="navigateTo('screen-analytics', 'Analytics')">
+                <div class="list-icon" style="background:var(--accent-light);">📊</div>
+                <div class="list-content">
+                    <div class="list-title">Analytics</div>
+                    <div class="list-subtitle">Warehouse and stock analytics</div>
+                </div>
+                <span class="list-arrow">›</span>
+            </div>
+            <div class="list-item" onclick="navigateTo('screen-history', 'Activity History')">
+                <div class="list-icon" style="background:var(--warning-light);">📋</div>
+                <div class="list-content">
+                    <div class="list-title">Activity History</div>
+                    <div class="list-subtitle">View logs and audit trail</div>
+                </div>
+                <span class="list-arrow">›</span>
+            </div>
+
+            <div class="section-title">Account</div>
+            <div class="list-item" onclick="doLogout()">
+                <div class="list-icon" style="background:var(--danger-light);">⏻</div>
+                <div class="list-content">
+                    <div class="list-title">Log Out</div>
+                    <div class="list-subtitle">Sign out of your account</div>
+                </div>
+                <span class="list-arrow">›</span>
+            </div>
+        </div>
+
+    </div><!-- end app-body -->
+
+    <!-- ================================================================
+         BOTTOM NAVIGATION BAR
+         ================================================================ -->
+    <nav class="bottom-nav" id="bottom-nav" style="display:none;">
+        <button class="nav-item active" onclick="switchNav('screen-dashboard', 'Dashboard', this)">
+            <span class="nav-icon">🏠</span>
+            <span>Home</span>
+        </button>
+        <button class="nav-item" onclick="switchNav('screen-stock', 'Stock Management', this)">
+            <span class="nav-icon">📦</span>
+            <span>Stock</span>
+        </button>
+        <button class="nav-item" onclick="switchNav('screen-items', 'Items', this)">
+            <span class="nav-icon">🏷️</span>
+            <span>Items</span>
+        </button>
+        <button class="nav-item" onclick="switchNav('screen-history', 'Activity History', this)">
+            <span class="nav-icon">📋</span>
+            <span>History</span>
+        </button>
+        <button class="nav-item" onclick="switchNav('screen-more', 'More', this)">
+            <span class="nav-icon">⋯</span>
+            <span>More</span>
+        </button>
+    </nav>
+
+</div><!-- end #app -->
+
+<!-- ====================================================================
+     MODALS
+     ==================================================================== -->
+
+<!-- Create / Edit Item Modal -->
+<div class="modal-overlay" id="modal-item">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <h3 id="modal-item-title">Create New Item</h3>
+        <div class="form-group">
+            <label>Item Name</label>
+            <input type="text" class="form-input" id="item-name" placeholder="e.g. Large Cups">
+        </div>
+        <div class="form-group">
+            <label>SKU</label>
+            <input type="text" class="form-input" id="item-sku" placeholder="e.g. CUP-LG-001">
+        </div>
+        <div class="form-group">
+            <label>Category</label>
+            <select class="form-input" id="item-category">
+                <option value="cup">🥤 Cup</option>
+                <option value="straw">🥤 Straw</option>
+                <option value="lid">🧢 Lid</option>
+                <option value="ingredient">🫖 Ingredient</option>
+                <option value="merch">🎁 Merch / Swag</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea class="form-input" id="item-desc" placeholder="Item description..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Custom Metadata (JSON) <span class="text-xs text-muted">— optional</span></label>
+            <textarea class="form-input" id="item-meta" placeholder='{"color": "pink", "size": "16oz"}' style="min-height:50px; font-family:monospace; font-size:12px;"></textarea>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeModal('modal-item')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveItem()">Save Item</button>
+        </div>
+    </div>
+</div>
+
+<!-- Create / Edit Warehouse Modal -->
+<div class="modal-overlay" id="modal-warehouse">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <h3 id="modal-warehouse-title">Add Warehouse</h3>
+        <div class="form-group">
+            <label>Warehouse Name</label>
+            <input type="text" class="form-input" id="wh-name" placeholder="e.g. Main Storage">
+        </div>
+        <div class="form-group">
+            <label>Address</label>
+            <input type="text" class="form-input" id="wh-address" placeholder="e.g. 123 Warehouse Ave">
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeModal('modal-warehouse')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveWarehouse()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit Location Modal -->
+<div class="modal-overlay" id="modal-location">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <h3>Add Stock Location</h3>
+        <div class="form-group">
+            <label>Location Name</label>
+            <input type="text" class="form-input" id="loc-name" placeholder="e.g. Aisle A — Cups & Lids">
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <input type="text" class="form-input" id="loc-desc" placeholder="e.g. Shelves 1–4">
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeModal('modal-location')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveLocation()">Save</button>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit User Modal -->
+<div class="modal-overlay" id="modal-user">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <h3 id="modal-user-title">Add User</h3>
+        <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" class="form-input" id="user-name" placeholder="e.g. Sarah Kim">
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" class="form-input" id="user-email" placeholder="sarah@jasonsteashop.com">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" class="form-input" id="user-password" placeholder="Enter password">
+        </div>
+        <div class="form-group">
+            <label>Access Level</label>
+            <select class="form-input" id="user-role">
+                <option value="stocker">Stocker — Manage stock only</option>
+                <option value="admin">Admin — Full access</option>
+            </select>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeModal('modal-user')">Cancel</button>
+            <button class="btn btn-primary" onclick="saveUser()">Save User</button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" id="modal-delete">
+    <div class="modal">
+        <div class="modal-handle"></div>
+        <h3>⚠️ Confirm Deletion</h3>
+        <p class="text-sm text-muted mb-16" id="delete-message">
+            Are you sure you want to delete this? This action cannot be undone.
+        </p>
+        <div class="card" id="delete-cascade-option" style="display:none;">
+            <div class="toggle-row">
+                <div>
+                    <div class="toggle-label">Cascade delete stock records</div>
+                    <div class="toggle-sublabel">Remove all stock entries across warehouses</div>
+                </div>
+                <button class="toggle on" id="cascade-toggle" onclick="this.classList.toggle('on')"></button>
+            </div>
+        </div>
+        <div class="btn-group">
+            <button class="btn btn-secondary" onclick="closeModal('modal-delete')">Cancel</button>
+            <button class="btn btn-danger" onclick="executeDelete()">Delete</button>
+        </div>
+    </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast"></div>
+
+<script src="app.js"></script>
+
+</body>
+</html>
