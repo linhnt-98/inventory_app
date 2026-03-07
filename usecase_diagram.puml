@@ -1,0 +1,272 @@
+@startuml Inventory Management System - Use Case Diagram
+
+' ============================================================
+' Jason's Tea Shop - Warehouse Inventory Management System
+' Use Case Diagram
+' ============================================================
+' This diagram models the interactions between actors and 
+' the system for tracking inventory across multiple warehouses.
+' Actors: Warehouse Admin, Stocker, System (automated)
+' ============================================================
+
+left to right direction
+skinparam packageStyle rectangle
+skinparam actorStyle awesome
+skinparam usecase {
+    BackgroundColor #FEFECE
+    BorderColor #A80036
+    ArrowColor #A80036
+}
+
+' --------------------------------------------------------
+' Actors
+' --------------------------------------------------------
+' Stocker: Basic warehouse employee who manages day-to-day
+'          item stock (receiving shipments, pulling items).
+' Warehouse Admin: Has all Stocker privileges plus 
+'          administrative capabilities (user mgmt, analytics,
+'          warehouse config, item definitions).
+' System: Automated actor that triggers notifications
+'          (e.g., low stock alerts) based on configured rules.
+' --------------------------------------------------------
+
+actor "Stocker" as stocker
+actor "Warehouse Admin" as admin
+actor "System" as system
+
+' Admin inherits all Stocker capabilities
+admin --|> stocker
+
+' ============================================================
+' USE CASE PACKAGES
+' ============================================================
+
+rectangle "Inventory Management System" {
+
+    ' --------------------------------------------------------
+    ' Authentication
+    ' --------------------------------------------------------
+    ' All users must authenticate before accessing the system.
+    ' --------------------------------------------------------
+    package "Authentication" {
+        usecase "Log In" as UC_Login
+        usecase "Log Out" as UC_Logout
+    }
+
+    ' --------------------------------------------------------
+    ' Item Management (CRUD on item definitions)
+    ' --------------------------------------------------------
+    ' Items represent product types in the system (cups,
+    ' straws, lids, ingredients, merch, etc.).
+    ' Each item has: name, description, SKU, category,
+    ' and optional custom metadata (JSON).
+    ' Categories: Straw, Cup, Lid, Toy/Merch/Swag, Ingredients
+    ' --------------------------------------------------------
+    package "Item Management" {
+        usecase "Create New Item" as UC_CreateItem
+        usecase "Edit Item Details" as UC_EditItem
+        usecase "Delete Item" as UC_DeleteItem
+        usecase "Manage Item Categories" as UC_ManageCategories
+
+        ' Deleting an item may cascade or prompt
+        ' the admin for a resolution if stock exists
+        usecase "Handle Deletion\n(Cascade / Resolve Stock)" as UC_HandleDeletion
+
+        UC_DeleteItem ..> UC_HandleDeletion : <<include>>
+    }
+
+    ' --------------------------------------------------------
+    ' Warehouse Stock Management
+    ' --------------------------------------------------------
+    ' Day-to-day operations: adding received shipments,
+    ' removing items taken from the warehouse, and
+    ' transferring stock between warehouses.
+    ' Barcode scanning speeds up item identification.
+    ' --------------------------------------------------------
+    package "Warehouse Stock Management" {
+        usecase "Select Warehouse" as UC_SelectWarehouse
+        usecase "Scan Item Barcode" as UC_ScanBarcode
+        usecase "Add Items to Stock" as UC_AddStock
+        usecase "Remove Items from Stock" as UC_RemoveStock
+        usecase "Enter Item Quantity" as UC_EnterQty
+        usecase "Move Items Between\nWarehouses" as UC_MoveStock
+
+        ' Adding/Removing stock requires selecting a warehouse,
+        ' scanning the barcode, and entering a quantity.
+        UC_AddStock ..> UC_SelectWarehouse : <<include>>
+        UC_AddStock ..> UC_ScanBarcode : <<include>>
+        UC_AddStock ..> UC_EnterQty : <<include>>
+
+        UC_RemoveStock ..> UC_SelectWarehouse : <<include>>
+        UC_RemoveStock ..> UC_ScanBarcode : <<include>>
+        UC_RemoveStock ..> UC_EnterQty : <<include>>
+
+        ' Moving stock automatically increases the destination
+        ' warehouse count and decreases the source warehouse count.
+        UC_MoveStock ..> UC_SelectWarehouse : <<include>>
+        UC_MoveStock ..> UC_ScanBarcode : <<include>>
+        UC_MoveStock ..> UC_EnterQty : <<include>>
+    }
+
+    ' --------------------------------------------------------
+    ' Warehouse & Location Management
+    ' --------------------------------------------------------
+    ' Admins configure warehouses (shops, storage facilities)
+    ' and their internal locations (aisles, shelves, zones).
+    ' --------------------------------------------------------
+    package "Warehouse & Location\nManagement" {
+        usecase "Add Warehouse" as UC_AddWarehouse
+        usecase "Edit Warehouse" as UC_EditWarehouse
+        usecase "Remove Warehouse" as UC_RemoveWarehouse
+        usecase "Add Stock Location" as UC_AddLocation
+        usecase "Edit Stock Location" as UC_EditLocation
+        usecase "Remove Stock Location" as UC_RemoveLocation
+    }
+
+    ' --------------------------------------------------------
+    ' User & Access Management
+    ' --------------------------------------------------------
+    ' Admins manage user accounts and their access levels.
+    ' Users have: Name, Email, Password, Admin flag.
+    ' Access management controls who can access what
+    ' and at what permission level.
+    ' --------------------------------------------------------
+    package "User & Access Management" {
+        usecase "Manage Users" as UC_ManageUsers
+        usecase "Set User Access Level" as UC_SetAccess
+
+        UC_ManageUsers ..> UC_SetAccess : <<include>>
+    }
+
+    ' --------------------------------------------------------
+    ' Activity & Audit Logging
+    ' --------------------------------------------------------
+    ' The system logs all significant actions for auditing:
+    '   - Stock updates (add/remove/move)
+    '   - User account changes
+    '   - Warehouse configuration changes
+    ' History is searchable by date and filterable by user.
+    ' --------------------------------------------------------
+    package "Activity & Audit Logging" {
+        usecase "View Activity History" as UC_ViewHistory
+        usecase "Search History by Date" as UC_SearchByDate
+        usecase "View User Actions" as UC_ViewUserActions
+        usecase "Log Stock Update" as UC_LogStock
+        usecase "Log User Update" as UC_LogUser
+        usecase "Log Warehouse Update" as UC_LogWarehouse
+
+        ' Searching and filtering extend the base history view
+        UC_ViewHistory <.. UC_SearchByDate : <<extend>>
+        UC_ViewHistory <.. UC_ViewUserActions : <<extend>>
+    }
+
+    ' --------------------------------------------------------
+    ' Analytics & Notifications
+    ' --------------------------------------------------------
+    ' Admins can view analytics dashboards and configure
+    ' low-stock thresholds. The system automatically sends
+    ' notifications when stock drops below a threshold.
+    ' --------------------------------------------------------
+    package "Analytics & Notifications" {
+        usecase "View Warehouse Analytics" as UC_Analytics
+        usecase "View Stock Analytics" as UC_StockAnalytics
+        usecase "Set Low Stock Threshold" as UC_SetThreshold
+        usecase "Send Low Stock\nNotification" as UC_Notify
+
+        ' Analytics can drill into stock details
+        UC_Analytics <.. UC_StockAnalytics : <<extend>>
+    }
+}
+
+' ============================================================
+' ACTOR - USE CASE ASSOCIATIONS
+' ============================================================
+
+' --- Stocker associations ---
+' Stockers handle day-to-day stock operations and can
+' view activity history for their own actions.
+stocker --> UC_Login
+stocker --> UC_Logout
+stocker --> UC_AddStock
+stocker --> UC_RemoveStock
+stocker --> UC_MoveStock
+stocker --> UC_ViewHistory
+
+' --- Warehouse Admin associations ---
+' Admins inherit Stocker use cases (via generalization)
+' and additionally manage items, warehouses, users, 
+' analytics, and notification settings.
+admin --> UC_CreateItem
+admin --> UC_EditItem
+admin --> UC_DeleteItem
+admin --> UC_ManageCategories
+admin --> UC_AddWarehouse
+admin --> UC_EditWarehouse
+admin --> UC_RemoveWarehouse
+admin --> UC_AddLocation
+admin --> UC_EditLocation
+admin --> UC_RemoveLocation
+admin --> UC_ManageUsers
+admin --> UC_Analytics
+admin --> UC_SetThreshold
+
+' --- System (automated) associations ---
+' The system actor handles automated logging and 
+' notification delivery without human intervention.
+system --> UC_Notify
+system --> UC_LogStock
+system --> UC_LogUser
+system --> UC_LogWarehouse
+
+' ============================================================
+' Notes
+' ============================================================
+
+note right of stocker
+    **Stocker**
+    Basic warehouse employee.
+    Manages day-to-day stock:
+    receiving shipments and
+    pulling items from storage.
+end note
+
+note right of admin
+    **Warehouse Admin**
+    Full access including:
+    - User management
+    - Warehouse configuration
+    - Item definitions (CRUD)
+    - Analytics & reports
+    - Notification settings
+end note
+
+note bottom of UC_MoveStock
+    Automatically adjusts stock:
+    **Source warehouse**: decreased
+    **Destination warehouse**: increased
+end note
+
+note bottom of UC_HandleDeletion
+    On item deletion:
+    - Cascade delete all stock records, OR
+    - Prompt admin to resolve 
+      non-empty stock first
+end note
+
+note right of UC_Notify
+    Triggered automatically when
+    stock level falls below the
+    configured threshold.
+    Users can define custom
+    limits per item/warehouse.
+end note
+
+note bottom of UC_LogStock
+    All audit logs capture:
+    - Timestamp
+    - Action type
+    - User who performed action
+    - Affected warehouse/item
+end note
+
+@enduml
