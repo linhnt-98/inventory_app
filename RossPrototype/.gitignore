@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Build output
+/dist
+/dist-ssr
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Local history, caches, and IDE specific files
+.DS_Store
+*.local
+/build
+.vscode/ # Optional: only if you want to ignore all IDE settings
