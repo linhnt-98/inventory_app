@@ -1532,6 +1532,132 @@ input, select, button, textarea {
   color: var(--gray-600);
 }
 
+/* --- Staff Management --- */
+.staff-card {
+  align-items: center;
+}
+
+.staff-card-inactive {
+  opacity: 0.55;
+}
+
+.staff-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 1rem;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.staff-avatar-1 { background: #4ade80; }
+.staff-avatar-2 { background: #60a5fa; }
+.staff-avatar-3 { background: #f97316; }
+.staff-avatar-4 { background: #a78bfa; }
+.staff-avatar-5 { background: #f43f5e; }
+
+.staff-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.staff-name-row h3 {
+  margin: 0;
+}
+
+.staff-role-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 20px;
+  letter-spacing: 0.02em;
+}
+
+.badge-manager {
+  background: var(--green-100);
+  color: var(--green-800);
+}
+
+.badge-staff {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.staff-inactive-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 20px;
+  background: var(--gray-200);
+  color: var(--gray-500);
+}
+
+.staff-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.staff-action-btn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.staff-action-btn:not(:disabled):hover {
+  background: var(--gray-100);
+  color: var(--gray-700);
+}
+
+/* --- Invite Modal --- */
+.invite-code-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--green-50);
+  border: 1.5px dashed var(--primary);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.invite-code-text {
+  flex: 1;
+  font-family: monospace;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--green-800);
+}
+
+.invite-regen-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.invite-regen-btn:hover {
+  background: var(--green-100);
+}
+
+.invite-hint {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+
 /* --- Buttons --- */
 .btn {
   display: inline-flex;

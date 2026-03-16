@@ -30,7 +30,7 @@ function appReducer(state, action) {
   switch (action.type) {
     case 'LOGIN': {
       const user = state.users.find(
-        (u) => u.username === action.payload.username && u.pin === action.payload.pin
+        (u) => u.username === action.payload.username && u.pin === action.payload.pin && u.isActive !== false
       );
       if (!user) return state;
       return { ...state, currentUser: user };
@@ -157,6 +157,18 @@ function appReducer(state, action) {
       return { ...state, users };
     }
 
+    case 'UPDATE_USER': {
+      const users = state.users.map((u) =>
+        u.id === action.payload.id ? { ...u, ...action.payload } : u
+      );
+      // Keep currentUser in sync if the updated user is the logged-in user
+      const currentUser =
+        state.currentUser?.id === action.payload.id
+          ? { ...state.currentUser, ...action.payload }
+          : state.currentUser;
+      return { ...state, users, currentUser };
+    }
+
     default:
       return state;
   }
@@ -167,9 +179,11 @@ export function AppProvider({ children }) {
 
   const login = useCallback((username, pin) => {
     dispatch({ type: 'LOGIN', payload: { username, pin } });
-    const user = USERS.find((u) => u.username === username && u.pin === pin);
+    const user = state.users.find(
+      (u) => u.username === username && u.pin === pin && u.isActive !== false
+    );
     return !!user;
-  }, []);
+  }, [state.users]);
 
   const logout = useCallback(() => dispatch({ type: 'LOGOUT' }), []);
 
@@ -219,6 +233,11 @@ export function AppProvider({ children }) {
     dispatch({ type: 'RESET_PIN', payload: { username, pin } });
   }, []);
 
+  const updateUser = useCallback(
+    (id, changes) => dispatch({ type: 'UPDATE_USER', payload: { id, ...changes } }),
+    []
+  );
+
   // Helper: get stock for current warehouse
   const getStockForWarehouse = useCallback(
     (warehouseId) => {
@@ -259,6 +278,7 @@ export function AppProvider({ children }) {
     addWarehouse,
     register,
     resetPin,
+    updateUser,
     getStockForWarehouse,
     getTransactions,
   };
