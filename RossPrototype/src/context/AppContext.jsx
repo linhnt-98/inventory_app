@@ -117,6 +117,23 @@ function appReducer(state, action) {
       return { ...state, warehouses: [...state.warehouses, newWarehouse], stock: newStock };
     }
 
+    case 'REGISTER_USER': {
+      const exists = state.users.find((u) => u.username === action.payload.username);
+      if (exists) return state;
+      const newUser = {
+        id: Math.max(...state.users.map((u) => u.id)) + 1,
+        ...action.payload,
+      };
+      return { ...state, users: [...state.users, newUser] };
+    }
+
+    case 'RESET_PIN': {
+      const users = state.users.map((u) =>
+        u.username === action.payload.username ? { ...u, pin: action.payload.pin } : u
+      );
+      return { ...state, users };
+    }
+
     default:
       return state;
   }
@@ -165,6 +182,14 @@ export function AppProvider({ children }) {
     []
   );
 
+  const register = useCallback((userData) => {
+    dispatch({ type: 'REGISTER_USER', payload: userData });
+  }, []);
+
+  const resetPin = useCallback((username, pin) => {
+    dispatch({ type: 'RESET_PIN', payload: { username, pin } });
+  }, []);
+
   // Helper: get stock for current warehouse
   const getStockForWarehouse = useCallback(
     (warehouseId) => {
@@ -202,6 +227,8 @@ export function AppProvider({ children }) {
     addItem,
     editItem,
     addWarehouse,
+    register,
+    resetPin,
     getStockForWarehouse,
     getTransactions,
   };

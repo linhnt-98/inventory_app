@@ -363,6 +363,119 @@ input, select, button, textarea {
   text-transform: capitalize;
 }
 
+/* Login links (Sign Up / Forgot PIN) */
+.login-links {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 12px;
+}
+
+.login-link-btn {
+  background: none;
+  border: none;
+  color: var(--primary);
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.login-link-btn:hover {
+  color: var(--green-800);
+}
+
+/* Auth modals (Sign Up / Reset PIN) */
+.auth-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 16px;
+}
+
+.auth-modal {
+  background: var(--surface);
+  border-radius: 20px;
+  padding: 24px;
+  width: 100%;
+  max-width: 360px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.auth-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.auth-modal-header h2 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--green-800);
+  margin: 0;
+}
+
+.auth-modal-close {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 6px;
+}
+
+.auth-modal-close:hover {
+  background: var(--gray-100);
+  color: var(--text-primary);
+}
+
+.auth-modal-success {
+  text-align: center;
+  padding: 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.auth-modal-success p {
+  font-weight: 600;
+  color: var(--green-800);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.auth-modal-success-sub {
+  font-weight: 400 !important;
+  color: var(--text-secondary) !important;
+  font-size: 0.85rem !important;
+  margin-bottom: 12px !important;
+}
+
+.form-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  background: var(--background);
+  color: var(--text-primary);
+  appearance: none;
+  cursor: pointer;
+}
+
+.form-select:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
 /* --- Dashboard / Warehouse Cards --- */
 
 /* --- Map --- */
