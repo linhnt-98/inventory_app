@@ -1339,6 +1339,25 @@ input, select, button, textarea {
   color: var(--red-600);
 }
 
+.badge-edit {
+  background: #e8f0fe;
+  color: #3b5bdb;
+}
+
+.txn-card-edit {
+  border-left: 3px solid #748ffc;
+}
+
+.txn-card-qty.qty-edit {
+  color: #3b5bdb;
+}
+
+.pill-edit.active {
+  background: #e8f0fe;
+  color: #3b5bdb;
+  border-color: #748ffc;
+}
+
 .txn-card-qty {
   font-weight: 700;
   font-size: 0.92rem;

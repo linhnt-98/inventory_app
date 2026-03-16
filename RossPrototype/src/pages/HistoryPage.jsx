@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
-import { ArrowDownToLine, ArrowUpFromLine, Clock, Filter, ChevronDown, X } from 'lucide-react';
+import { ArrowDownToLine, ArrowUpFromLine, Clock, Filter, ChevronDown, X, PencilLine } from 'lucide-react';
 
 function formatDateTime(timestamp) {
   const d = new Date(timestamp);
@@ -29,7 +29,7 @@ function getDateRangeStart(range) {
 }
 
 export default function HistoryPage() {
-  const { getTransactions, items, warehouses, users, selectedWarehouseId } = useApp();
+  const { transactions: allTransactions, items, warehouses, users, selectedWarehouseId } = useApp();
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('all');
@@ -42,11 +42,11 @@ export default function HistoryPage() {
   const [sortDir, setSortDir] = useState('desc');
 
   const transactions = useMemo(() => {
-    const opts = {};
-    if (filterWarehouse !== 'all') opts.warehouseId = filterWarehouse;
-    if (filterItem !== 'all') opts.itemId = filterItem;
-    return getTransactions(opts);
-  }, [getTransactions, filterWarehouse, filterItem]);
+    let txns = [...allTransactions];
+    if (filterWarehouse !== 'all') txns = txns.filter((t) => t.warehouseId === filterWarehouse);
+    if (filterItem !== 'all') txns = txns.filter((t) => t.itemId === filterItem);
+    return txns;
+  }, [allTransactions, filterWarehouse, filterItem]);
 
   const filtered = useMemo(() => {
     let result = [...transactions];
@@ -146,6 +146,12 @@ export default function HistoryPage() {
               onClick={() => setFilterType('out')}
             >
               <ArrowUpFromLine size={14} /> Out
+            </button>
+            <button
+              className={`pill pill-edit ${filterType === 'edit' ? 'active' : ''}`}
+              onClick={() => setFilterType('edit')}
+            >
+              <PencilLine size={14} /> Edit
             </button>
           </div>
           <button
@@ -257,22 +263,30 @@ export default function HistoryPage() {
               const warehouse = getWarehouse(txn.warehouseId);
               const user = getUser(txn.userId);
               const isIn = txn.type === 'in';
+              const isEdit = txn.type === 'edit';
               const dt = formatDateTime(txn.createdAt);
 
               return (
-                <div key={txn.id} className={`txn-card ${isIn ? 'txn-card-in' : 'txn-card-out'}`}>
+                <div key={txn.id} className={`txn-card ${isIn ? 'txn-card-in' : isEdit ? 'txn-card-edit' : 'txn-card-out'}`}>
                   {/* Row 1: Date/Time left, Type badge + Qty right */}
                   <div className="txn-card-top">
                     <span className="txn-card-datetime">{dt.date} · {dt.time}</span>
                     <div className="txn-card-right">
-                      <span className={`type-badge ${isIn ? 'badge-in' : 'badge-out'}`}>
-                        {isIn ? <ArrowDownToLine size={11} /> : <ArrowUpFromLine size={11} />}
-                        {isIn ? 'IN' : 'OUT'}
+                      <span className={`type-badge ${isIn ? 'badge-in' : isEdit ? 'badge-edit' : 'badge-out'}`}>
+                        {isIn ? <ArrowDownToLine size={11} /> : isEdit ? <PencilLine size={11} /> : <ArrowUpFromLine size={11} />}
+                        {isIn ? 'IN' : isEdit ? 'EDIT' : 'OUT'}
                       </span>
-                      <span className={`txn-card-qty ${isIn ? 'qty-in' : 'qty-out'}`}>
-                        {isIn ? '+' : '−'}{txn.quantity}
-                        <span className="txn-card-unit">{item?.unit}</span>
-                      </span>
+                      {isEdit ? (
+                        <span className="txn-card-qty qty-edit">
+                          {txn.previousQty} → {txn.quantity}
+                          <span className="txn-card-unit">{item?.unit}</span>
+                        </span>
+                      ) : (
+                        <span className={`txn-card-qty ${isIn ? 'qty-in' : 'qty-out'}`}>
+                          {isIn ? '+' : '−'}{txn.quantity}
+                          <span className="txn-card-unit">{item?.unit}</span>
+                        </span>
+                      )}
                     </div>
                   </div>
                   {/* Row 2: Item left, User right */}

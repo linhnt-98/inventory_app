@@ -117,6 +117,29 @@ function appReducer(state, action) {
       return { ...state, warehouses: [...state.warehouses, newWarehouse], stock: newStock };
     }
 
+    case 'EDIT_STOCK': {
+      const { warehouseId, itemId, newQuantity, note } = action.payload;
+      const warehouseStock = { ...state.stock[warehouseId] };
+      const previousQty = warehouseStock[itemId] || 0;
+      warehouseStock[itemId] = newQuantity;
+      const newTransaction = {
+        id: state.transactions.length + 1,
+        warehouseId,
+        itemId,
+        userId: state.currentUser.id,
+        type: 'edit',
+        quantity: newQuantity,
+        previousQty,
+        note: note || '',
+        createdAt: Date.now(),
+      };
+      return {
+        ...state,
+        stock: { ...state.stock, [warehouseId]: warehouseStock },
+        transactions: [newTransaction, ...state.transactions],
+      };
+    }
+
     case 'REGISTER_USER': {
       const exists = state.users.find((u) => u.username === action.payload.username);
       if (exists) return state;
@@ -182,6 +205,12 @@ export function AppProvider({ children }) {
     []
   );
 
+  const editStock = useCallback(
+    (warehouseId, itemId, newQuantity, note) =>
+      dispatch({ type: 'EDIT_STOCK', payload: { warehouseId, itemId, newQuantity, note } }),
+    []
+  );
+
   const register = useCallback((userData) => {
     dispatch({ type: 'REGISTER_USER', payload: userData });
   }, []);
@@ -226,6 +255,7 @@ export function AppProvider({ children }) {
     stockOut,
     addItem,
     editItem,
+    editStock,
     addWarehouse,
     register,
     resetPin,

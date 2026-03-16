@@ -70,5 +70,9 @@ export const INITIAL_TRANSACTIONS = [
   { id: 15, warehouseId: 2, itemId: 14, userId: 2, type: 'out', quantity: 2,  note: 'Customer purchase',               createdAt: now - 5.5 * day },
   { id: 16, warehouseId: 1, itemId: 2,  userId: 1, type: 'in',  quantity: 25, note: 'Sencha bulk order',               createdAt: now - 6 * day },
   { id: 17, warehouseId: 3, itemId: 11, userId: 3, type: 'out', quantity: 2,  note: 'Sample for tasting event',        createdAt: now - 6.5 * day },
-  { id: 18, warehouseId: 1, itemId: 4,  userId: 2, type: 'in',  quantity: 12, note: 'Dragon Well spring harvest',      createdAt: now - 7 * day },
+  { id: 18, warehouseId: 1, itemId: 4,  userId: 2, type: 'in',   quantity: 12,  note: 'Dragon Well spring harvest',        createdAt: now - 7 * day },
+  { id: 19, warehouseId: 1, itemId: 1,  userId: 1, type: 'edit', quantity: 50, previousQty: 48, note: 'Stock count correction',            createdAt: now - 3 * hour },
+  { id: 20, warehouseId: 2, itemId: 5,  userId: 1, type: 'edit', quantity: 18, previousQty: 15, note: 'Physical count — found extra boxes', createdAt: now - 1 * day - 3 * hour },
+  { id: 21, warehouseId: 3, itemId: 9,  userId: 3, type: 'edit', quantity: 4,  previousQty: 6,  note: 'Damaged stock removed from count',   createdAt: now - 2 * day - 1 * hour },
+  { id: 22, warehouseId: 1, itemId: 16, userId: 1, type: 'edit', quantity: 28, previousQty: 35, note: 'Recount after gift box promo',       createdAt: now - 5 * day - 2 * hour },
 ];
