@@ -236,12 +236,11 @@ export function AppProvider({ children }) {
   }, [state.users]);
 
   const login = useCallback((username, pin) => {
-    const user = state.users.find((u) => u.username === username && u.pin === pin);
-    if (!user) return false;
-    dispatch({ type: 'LOGIN', payload: { username, pin } });
     const user = state.users.find(
       (u) => u.username === username && u.pin === pin && u.isActive !== false
     );
+    if (!user) return false;
+    dispatch({ type: 'LOGIN', payload: { username, pin } });
     return !!user;
   }, [state.users]);
 
