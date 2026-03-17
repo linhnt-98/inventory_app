@@ -244,6 +244,43 @@ export function AppProvider({ children }) {
     return !!user;
   }, [state.users]);
 
+  const createInitialManager = useCallback(({ displayName, username, pin }) => {
+    const normalizedDisplayName = displayName?.trim();
+    const normalizedUsername = username?.trim();
+    const normalizedPin = String(pin ?? '').trim();
+
+    if (!state.bootstrapRequired) {
+      return { ok: false, error: 'Setup has already been completed.' };
+    }
+    if (!normalizedDisplayName) {
+      return { ok: false, error: 'Display name is required.' };
+    }
+    if (!normalizedUsername) {
+      return { ok: false, error: 'Username is required.' };
+    }
+    if (!/^\d{4}$/.test(normalizedPin)) {
+      return { ok: false, error: 'PIN must be 4 digits.' };
+    }
+
+    const usernameExists = state.users.some(
+      (user) => user.username.toLowerCase() === normalizedUsername.toLowerCase()
+    );
+    if (usernameExists) {
+      return { ok: false, error: 'Username already exists.' };
+    }
+
+    dispatch({
+      type: 'CREATE_INITIAL_MANAGER',
+      payload: {
+        displayName: normalizedDisplayName,
+        username: normalizedUsername,
+        pin: normalizedPin,
+      },
+    });
+
+    return { ok: true };
+  }, [state.bootstrapRequired, state.users]);
+
   const logout = useCallback(() => dispatch({ type: 'LOGOUT' }), []);
 
   const selectWarehouse = useCallback(
