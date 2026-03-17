@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "firebase": "^12.10.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
