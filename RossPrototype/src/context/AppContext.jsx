@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useCallback } from 'react';
+import { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
 import {
   USERS,
   WAREHOUSES,
@@ -10,12 +10,40 @@ import {
 
 const AppContext = createContext(null);
 
+const USERS_STORAGE_KEY = 'inventory_users_v1';
+
+function hasManager(users) {
+  return users.some((user) => user.role === 'manager');
+}
+
+function getDefaultUsers() {
+  return USERS.filter((user) => user.role !== 'manager');
+}
+
+function getInitialUsers() {
+  if (typeof window === 'undefined') return getDefaultUsers();
+
+  try {
+    const stored = window.localStorage.getItem(USERS_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed)) return parsed;
+    }
+  } catch {
+    // ignore parse/storage errors for prototype fallback
+  }
+  return getDefaultUsers();
+}
+
+const initialUsers = getInitialUsers();
+
 const initialState = {
   // Auth
   currentUser: null,
+  bootstrapRequired: !hasManager(initialUsers),
 
   // Data
-  users: USERS,
+  users: initialUsers,
   warehouses: WAREHOUSES,
   items: ITEMS,
   categories: CATEGORIES,
@@ -34,6 +62,31 @@ function appReducer(state, action) {
       );
       if (!user) return state;
       return { ...state, currentUser: user };
+    }
+
+    case 'CREATE_INITIAL_MANAGER': {
+      if (!state.bootstrapRequired || hasManager(state.users)) return state;
+
+      const normalizedUsername = action.payload.username.toLowerCase();
+      const usernameExists = state.users.some(
+        (user) => user.username.toLowerCase() === normalizedUsername
+      );
+      if (usernameExists) return state;
+
+      const newManager = {
+        id: state.users.length ? Math.max(...state.users.map((user) => user.id)) + 1 : 1,
+        username: action.payload.username,
+        displayName: action.payload.displayName,
+        role: 'manager',
+        pin: action.payload.pin,
+      };
+
+      return {
+        ...state,
+        users: [...state.users, newManager],
+        currentUser: newManager,
+        bootstrapRequired: false,
+      };
     }
 
     case 'LOGOUT':
@@ -177,7 +230,14 @@ function appReducer(state, action) {
 export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(state.users));
+  }, [state.users]);
+
   const login = useCallback((username, pin) => {
+    const user = state.users.find((u) => u.username === username && u.pin === pin);
+    if (!user) return false;
     dispatch({ type: 'LOGIN', payload: { username, pin } });
     const user = state.users.find(
       (u) => u.username === username && u.pin === pin && u.isActive !== false
@@ -269,6 +329,7 @@ export function AppProvider({ children }) {
     ...state,
     login,
     logout,
+    createInitialManager,
     selectWarehouse,
     stockIn,
     stockOut,
