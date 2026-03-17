@@ -1,54 +1,23 @@
 import { createContext, useContext, useReducer, useCallback, useEffect } from 'react';
-import {
-  USERS,
-  WAREHOUSES,
-  ITEMS,
-  CATEGORIES,
-  INITIAL_STOCK,
-  INITIAL_TRANSACTIONS,
-} from '../data/mockData';
+import { getBackendAdapter } from '../services/backend';
 
 const AppContext = createContext(null);
 
-const USERS_STORAGE_KEY = 'inventory_users_v1';
-
-function hasManager(users) {
-  return users.some((user) => user.role === 'manager');
-}
-
-function getDefaultUsers() {
-  return USERS.filter((user) => user.role !== 'manager');
-}
-
-function getInitialUsers() {
-  if (typeof window === 'undefined') return getDefaultUsers();
-
-  try {
-    const stored = window.localStorage.getItem(USERS_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) return parsed;
-    }
-  } catch {
-    // ignore parse/storage errors for prototype fallback
-  }
-  return getDefaultUsers();
-}
-
-const initialUsers = getInitialUsers();
+const backend = getBackendAdapter();
+const initialBackendState = backend.loadInitialData();
 
 const initialState = {
   // Auth
   currentUser: null,
-  bootstrapRequired: !hasManager(initialUsers),
+  bootstrapRequired: initialBackendState.bootstrapRequired,
 
   // Data
-  users: initialUsers,
-  warehouses: WAREHOUSES,
-  items: ITEMS,
-  categories: CATEGORIES,
-  stock: INITIAL_STOCK,
-  transactions: INITIAL_TRANSACTIONS,
+  users: initialBackendState.users,
+  warehouses: initialBackendState.warehouses,
+  items: initialBackendState.items,
+  categories: initialBackendState.categories,
+  stock: initialBackendState.stock,
+  transactions: initialBackendState.transactions,
 
   // UI state
   selectedWarehouseId: null,
@@ -57,36 +26,15 @@ const initialState = {
 function appReducer(state, action) {
   switch (action.type) {
     case 'LOGIN': {
-      const user = state.users.find(
-        (u) => u.username === action.payload.username && u.pin === action.payload.pin && u.isActive !== false
-      );
+      const user = backend.login(state, action.payload);
       if (!user) return state;
       return { ...state, currentUser: user };
     }
 
     case 'CREATE_INITIAL_MANAGER': {
-      if (!state.bootstrapRequired || hasManager(state.users)) return state;
-
-      const normalizedUsername = action.payload.username.toLowerCase();
-      const usernameExists = state.users.some(
-        (user) => user.username.toLowerCase() === normalizedUsername
-      );
-      if (usernameExists) return state;
-
-      const newManager = {
-        id: state.users.length ? Math.max(...state.users.map((user) => user.id)) + 1 : 1,
-        username: action.payload.username,
-        displayName: action.payload.displayName,
-        role: 'manager',
-        pin: action.payload.pin,
-      };
-
-      return {
-        ...state,
-        users: [...state.users, newManager],
-        currentUser: newManager,
-        bootstrapRequired: false,
-      };
+      const result = backend.createInitialManager(state, action.payload);
+      if (!result.ok) return state;
+      return { ...state, ...result.data };
     }
 
     case 'LOGOUT':
@@ -96,130 +44,57 @@ function appReducer(state, action) {
       return { ...state, selectedWarehouseId: action.payload };
 
     case 'STOCK_IN': {
-      const { warehouseId, itemId, quantity, note } = action.payload;
-      const warehouseStock = { ...state.stock[warehouseId] };
-      warehouseStock[itemId] = (warehouseStock[itemId] || 0) + quantity;
-
-      const newTransaction = {
-        id: state.transactions.length + 1,
-        warehouseId,
-        itemId,
-        userId: state.currentUser.id,
-        type: 'in',
-        quantity,
-        note: note || '',
-        createdAt: Date.now(),
-      };
-
-      return {
-        ...state,
-        stock: { ...state.stock, [warehouseId]: warehouseStock },
-        transactions: [newTransaction, ...state.transactions],
-      };
+      const result = backend.stockIn(state, action.payload);
+      if (!result.ok) return state;
+      return { ...state, ...result.data };
     }
 
     case 'STOCK_OUT': {
-      const { warehouseId, itemId, quantity, note } = action.payload;
-      const warehouseStock = { ...state.stock[warehouseId] };
-      const currentQty = warehouseStock[itemId] || 0;
-      if (quantity > currentQty) return state; // prevent negative
-      warehouseStock[itemId] = currentQty - quantity;
-
-      const newTransaction = {
-        id: state.transactions.length + 1,
-        warehouseId,
-        itemId,
-        userId: state.currentUser.id,
-        type: 'out',
-        quantity,
-        note: note || '',
-        createdAt: Date.now(),
-      };
-
-      return {
-        ...state,
-        stock: { ...state.stock, [warehouseId]: warehouseStock },
-        transactions: [newTransaction, ...state.transactions],
-      };
+      const result = backend.stockOut(state, action.payload);
+      if (!result.ok) return state;
+      return { ...state, ...result.data };
     }
 
     case 'ADD_ITEM': {
-      const newItem = {
-        id: Math.max(...state.items.map((i) => i.id)) + 1,
-        ...action.payload,
-        isActive: true,
-      };
-      return { ...state, items: [...state.items, newItem] };
+      const result = backend.addItem(state, action.payload);
+      if (!result.ok) return state;
+      return { ...state, ...result.data };
     }
 
     case 'EDIT_ITEM': {
-      const items = state.items.map((item) =>
-        item.id === action.payload.id ? { ...item, ...action.payload } : item
-      );
-      return { ...state, items };
+      const result = backend.editItem(state, action.payload);
+      if (!result.ok) return state;
+      return { ...state, ...result.data };
     }
 
     case 'ADD_WAREHOUSE': {
-      const newWarehouse = {
-        id: Math.max(...state.warehouses.map((w) => w.id)) + 1,
-        ...action.payload,
-        isActive: true,
-      };
-      // Initialize empty stock for the new warehouse
-      const newStock = { ...state.stock, [newWarehouse.id]: {} };
-      return { ...state, warehouses: [...state.warehouses, newWarehouse], stock: newStock };
+      const result = backend.addWarehouse(state, action.payload);
+      if (!result.ok) return state;
+      return { ...state, ...result.data };
     }
 
     case 'EDIT_STOCK': {
-      const { warehouseId, itemId, newQuantity, note } = action.payload;
-      const warehouseStock = { ...state.stock[warehouseId] };
-      const previousQty = warehouseStock[itemId] || 0;
-      warehouseStock[itemId] = newQuantity;
-      const newTransaction = {
-        id: state.transactions.length + 1,
-        warehouseId,
-        itemId,
-        userId: state.currentUser.id,
-        type: 'edit',
-        quantity: newQuantity,
-        previousQty,
-        note: note || '',
-        createdAt: Date.now(),
-      };
-      return {
-        ...state,
-        stock: { ...state.stock, [warehouseId]: warehouseStock },
-        transactions: [newTransaction, ...state.transactions],
-      };
+      const result = backend.editStock(state, action.payload);
+      if (!result.ok) return state;
+      return { ...state, ...result.data };
     }
 
     case 'REGISTER_USER': {
-      const exists = state.users.find((u) => u.username === action.payload.username);
-      if (exists) return state;
-      const newUser = {
-        id: Math.max(...state.users.map((u) => u.id)) + 1,
-        ...action.payload,
-      };
-      return { ...state, users: [...state.users, newUser] };
+      const result = backend.registerUser(state, action.payload);
+      if (!result.ok) return state;
+      return { ...state, ...result.data };
     }
 
     case 'RESET_PIN': {
-      const users = state.users.map((u) =>
-        u.username === action.payload.username ? { ...u, pin: action.payload.pin } : u
-      );
-      return { ...state, users };
+      const result = backend.resetUserPin(state, action.payload);
+      if (!result.ok) return state;
+      return { ...state, ...result.data };
     }
 
     case 'UPDATE_USER': {
-      const users = state.users.map((u) =>
-        u.id === action.payload.id ? { ...u, ...action.payload } : u
-      );
-      // Keep currentUser in sync if the updated user is the logged-in user
-      const currentUser =
-        state.currentUser?.id === action.payload.id
-          ? { ...state.currentUser, ...action.payload }
-          : state.currentUser;
-      return { ...state, users, currentUser };
+      const result = backend.updateUser(state, action.payload);
+      if (!result.ok) return state;
+      return { ...state, ...result.data };
     }
 
     default:
@@ -231,8 +106,7 @@ export function AppProvider({ children }) {
   const [state, dispatch] = useReducer(appReducer, initialState);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(state.users));
+    backend.persistUsers?.(state.users);
   }, [state.users]);
 
   const login = useCallback((username, pin) => {
