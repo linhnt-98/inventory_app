@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Leaf } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 
 export default function SetupPage() {
-  const { createInitialManager, users } = useApp();
+  const { createInitialManager, apiError } = useApp();
   const navigate = useNavigate();
 
   const [displayName, setDisplayName] = useState('');
@@ -12,20 +12,20 @@ export default function SetupPage() {
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+    if (isSubmitting) return;
 
     if (pin !== confirmPin) {
       setError('PIN confirmation does not match.');
       return;
     }
 
-    const result = createInitialManager({
-      displayName,
-      username,
-      pin,
-    });
+    setIsSubmitting(true);
+    const result = await createInitialManager({ displayName, username, pin });
+    setIsSubmitting(false);
 
     if (!result.ok) {
       setError(result.error || 'Unable to create manager account.');
@@ -34,8 +34,6 @@ export default function SetupPage() {
 
     navigate('/dashboard', { replace: true });
   };
-
-  const employeeCount = users.filter((user) => user.role === 'employee').length;
 
   return (
     <div className="login-page">
@@ -61,6 +59,7 @@ export default function SetupPage() {
               }}
               placeholder="e.g. Jason"
               autoComplete="name"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -76,6 +75,7 @@ export default function SetupPage() {
               }}
               placeholder="e.g. jason"
               autoComplete="username"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -93,6 +93,7 @@ export default function SetupPage() {
               }}
               placeholder="4-digit PIN"
               autoComplete="new-password"
+              disabled={isSubmitting}
             />
           </div>
 
@@ -110,24 +111,16 @@ export default function SetupPage() {
               }}
               placeholder="Re-enter PIN"
               autoComplete="new-password"
+              disabled={isSubmitting}
             />
           </div>
 
-          {error && <p className="form-error">{error}</p>}
+          {(error || apiError) && <p className="form-error">{error || apiError}</p>}
 
-          <button type="submit" className="btn btn-primary btn-full">
-            Create Manager & Continue
+          <button type="submit" className="btn btn-primary btn-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Creating Manager...' : 'Create Manager & Continue'}
           </button>
         </form>
-
-        <div className="quick-login" style={{ marginTop: 20 }}>
-          <div className="quick-login-info" style={{ alignItems: 'center' }}>
-            <strong style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Leaf size={14} /> Demo bootstrapping enabled
-            </strong>
-            <small>{employeeCount} employee account(s) are pre-seeded in this prototype.</small>
-          </div>
-        </div>
       </div>
     </div>
   );

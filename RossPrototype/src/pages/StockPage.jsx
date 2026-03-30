@@ -60,12 +60,20 @@ export default function StockPage() {
     setModalMode(mode);
   };
 
-  const handleConfirm = (quantity, note) => {
+  const handleConfirm = async (quantity, note) => {
     if (modalMode === 'in') {
-      stockIn(selectedWarehouseId, modalItem.id, quantity, note);
+      const result = await stockIn(selectedWarehouseId, modalItem.id, quantity, note);
+      if (!result.ok) {
+        setToast({ message: result.error || 'Unable to add stock.', type: 'out' });
+        return;
+      }
       setToast({ message: `Added ${quantity} ${modalItem.unit} of ${modalItem.name}`, type: 'success' });
     } else {
-      stockOut(selectedWarehouseId, modalItem.id, quantity, note);
+      const result = await stockOut(selectedWarehouseId, modalItem.id, quantity, note);
+      if (!result.ok) {
+        setToast({ message: result.error || 'Unable to remove stock.', type: 'out' });
+        return;
+      }
       setToast({ message: `Removed ${quantity} ${modalItem.unit} of ${modalItem.name}`, type: 'out' });
     }
     setModalItem(null);

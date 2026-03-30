@@ -264,6 +264,9 @@ export default function HistoryPage() {
               const user = getUser(txn.userId);
               const isIn = txn.type === 'in';
               const isEdit = txn.type === 'edit';
+              const delta = typeof txn.delta === 'number'
+                ? txn.delta
+                : (isIn ? txn.quantity : -txn.quantity);
               const dt = formatDateTime(txn.createdAt);
 
               return (
@@ -278,7 +281,7 @@ export default function HistoryPage() {
                       </span>
                       {isEdit ? (
                         <span className="txn-card-qty qty-edit">
-                          {txn.previousQty} → {txn.quantity}
+                          {delta > 0 ? '+' : ''}{delta}
                           <span className="txn-card-unit">{item?.unit}</span>
                         </span>
                       ) : (

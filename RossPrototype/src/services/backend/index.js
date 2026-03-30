@@ -1,8 +1,13 @@
 import { createLocalBackend } from './localBackend';
 import { createFirebaseBackend } from './firebaseBackend';
+import { createFastApiBackend } from './fastapiBackend';
 
 export function getBackendAdapter() {
-  const provider = import.meta.env.VITE_BACKEND_PROVIDER || 'local';
+  const provider = import.meta.env.VITE_BACKEND_PROVIDER || 'fastapi';
+
+  if (provider === 'fastapi') {
+    return createFastApiBackend();
+  }
 
   if (provider === 'firebase') {
     return createFirebaseBackend();

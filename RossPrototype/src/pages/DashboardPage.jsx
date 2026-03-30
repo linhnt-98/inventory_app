@@ -49,6 +49,9 @@ export default function DashboardPage() {
   const [hoveredId, setHoveredId] = useState(null);
 
   const activeWarehouses = warehouses.filter((w) => w.isActive);
+  const mappableWarehouses = activeWarehouses.filter(
+    (w) => typeof w.lat === 'number' && typeof w.lng === 'number'
+  );
 
   const handleSelectWarehouse = (id) => {
     selectWarehouse(id);
@@ -91,8 +94,8 @@ export default function DashboardPage() {
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a>'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
-            <FitBounds warehouses={activeWarehouses} />
-            {activeWarehouses.map((warehouse) => {
+            <FitBounds warehouses={mappableWarehouses} />
+            {mappableWarehouses.map((warehouse) => {
               const stats = getWarehouseStats(warehouse.id);
               return (
                 <Marker

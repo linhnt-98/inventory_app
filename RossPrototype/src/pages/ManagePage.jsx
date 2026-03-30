@@ -2,17 +2,41 @@ import { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
-import { Plus, Edit2, Package, MapPin, X, Users, ShieldCheck, ShieldOff, UserCheck, UserX, UserPlus, Copy, Check, RefreshCw } from 'lucide-react';
+import {
+  Plus,
+  Edit2,
+  Package,
+  MapPin,
+  X,
+  Users,
+  ShieldCheck,
+  ShieldOff,
+  UserCheck,
+  UserX,
+  UserPlus,
+} from 'lucide-react';
 
 function AddItemModal({ categories, onAdd, onClose }) {
   const [name, setName] = useState('');
-  const [category, setCategory] = useState(categories[0] || '');
+  const [category, setCategory] = useState(categories[0] || 'Tea');
   const [unit, setUnit] = useState('bags');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    onAdd({ name: name.trim(), category, unit });
+    if (!name.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError('');
+    const result = await onAdd({ name: name.trim(), category, unit });
+    setIsSubmitting(false);
+
+    if (!result.ok) {
+      setError(result.error || 'Unable to add item.');
+      return;
+    }
+
     onClose();
   };
 
@@ -31,25 +55,38 @@ function AddItemModal({ categories, onAdd, onClose }) {
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Jasmine Green Tea 250g"
             autoFocus
+            disabled={isSubmitting}
           />
 
           <label className="modal-label">Category</label>
-          <select className="modal-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <select
+            className="modal-input"
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            disabled={isSubmitting}
+          >
             {categories.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
 
           <label className="modal-label">Unit</label>
-          <select className="modal-input" value={unit} onChange={(e) => setUnit(e.target.value)}>
+          <select
+            className="modal-input"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            disabled={isSubmitting}
+          >
             {['bags', 'boxes', 'tins', 'pcs', 'kg', 'bottles'].map((u) => (
               <option key={u} value={u}>{u}</option>
             ))}
           </select>
 
+          {error && <p className="form-error">{error}</p>}
+
           <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={!name.trim()}>Add Item</button>
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={!name.trim() || isSubmitting}>Add Item</button>
           </div>
         </form>
       </div>
@@ -60,11 +97,23 @@ function AddItemModal({ categories, onAdd, onClose }) {
 function AddWarehouseModal({ onAdd, onClose }) {
   const [name, setName] = useState('');
   const [address, setAddress] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim()) return;
-    onAdd({ name: name.trim(), address: address.trim() });
+    if (!name.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setError('');
+    const result = await onAdd({ name: name.trim(), address: address.trim() });
+    setIsSubmitting(false);
+
+    if (!result.ok) {
+      setError(result.error || 'Unable to add warehouse.');
+      return;
+    }
+
     onClose();
   };
 
@@ -83,6 +132,7 @@ function AddWarehouseModal({ onAdd, onClose }) {
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. North Storage"
             autoFocus
+            disabled={isSubmitting}
           />
 
           <label className="modal-label">Address (optional)</label>
@@ -91,11 +141,14 @@ function AddWarehouseModal({ onAdd, onClose }) {
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="e.g. 100 Warehouse Rd"
+            disabled={isSubmitting}
           />
 
+          {error && <p className="form-error">{error}</p>}
+
           <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={!name.trim()}>Add Warehouse</button>
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={!name.trim() || isSubmitting}>Add Warehouse</button>
           </div>
         </form>
       </div>
@@ -103,23 +156,41 @@ function AddWarehouseModal({ onAdd, onClose }) {
   );
 }
 
-function generateCode() {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  const seg = () => Array.from({ length: 4 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  return `INV-${seg()}-${seg()}`;
-}
-
-function InviteModal({ onClose }) {
+function AddUserModal({ onAdd, onClose }) {
+  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('');
   const [role, setRole] = useState('staff');
-  const [code, setCode] = useState(generateCode);
-  const [copied, setCopied] = useState(false);
+  const [pin, setPin] = useState('');
+  const [confirmPin, setConfirmPin] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
-  const inviteText = `Join Jason's Tea Shop inventory system!\nInvite code: ${code}\nRole: ${role === 'manager' ? 'Manager' : 'Staff'}\n\nUse this code when signing up to get started.`;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isSubmitting) return;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(inviteText).catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    if (!displayName.trim()) return setError('Display name is required.');
+    if (!username.trim()) return setError('Username is required.');
+    if (pin.length !== 4) return setError('PIN must be 4 digits.');
+    if (pin !== confirmPin) return setError('PINs do not match.');
+
+    setIsSubmitting(true);
+    setError('');
+
+    const result = await onAdd({
+      displayName: displayName.trim(),
+      username: username.trim(),
+      role,
+      pin,
+    });
+
+    setIsSubmitting(false);
+    if (!result.ok) {
+      setError(result.error || 'Unable to add user.');
+      return;
+    }
+
+    onClose();
   };
 
   return (
@@ -127,49 +198,85 @@ function InviteModal({ onClose }) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <button className="modal-close" onClick={onClose}><X size={20} /></button>
         <div className="modal-header">
-          <h2>Invite Team Member</h2>
+          <h2>Add Team Member</h2>
         </div>
-        <div className="modal-body">
-          <label className="modal-label">Role for new member</label>
-          <select className="modal-input" value={role} onChange={(e) => setRole(e.target.value)}>
+        <form onSubmit={handleSubmit} className="modal-body">
+          <label className="modal-label">Display Name</label>
+          <input
+            className="modal-input"
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
+            disabled={isSubmitting}
+          />
+
+          <label className="modal-label">Username</label>
+          <input
+            className="modal-input"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            disabled={isSubmitting}
+          />
+
+          <label className="modal-label">Role</label>
+          <select className="modal-input" value={role} onChange={(e) => setRole(e.target.value)} disabled={isSubmitting}>
             <option value="staff">Staff</option>
             <option value="manager">Manager</option>
           </select>
 
-          <label className="modal-label" style={{ marginTop: 16 }}>Invite code</label>
-          <div className="invite-code-box">
-            <span className="invite-code-text">{code}</span>
-            <button
-              className="invite-regen-btn"
-              title="Generate new code"
-              onClick={() => { setCode(generateCode()); setCopied(false); }}
-            >
-              <RefreshCw size={14} />
-            </button>
-          </div>
-          <p className="invite-hint">
-            Share this code with the team member. They can enter it on the Sign Up screen to join with the <strong>{role === 'manager' ? 'Manager' : 'Staff'}</strong> role.
-          </p>
+          <label className="modal-label">PIN</label>
+          <input
+            className="modal-input"
+            type="password"
+            inputMode="numeric"
+            maxLength={4}
+            value={pin}
+            onChange={(e) => setPin(e.target.value.replace(/\D/g, ''))}
+            disabled={isSubmitting}
+          />
+
+          <label className="modal-label">Confirm PIN</label>
+          <input
+            className="modal-input"
+            type="password"
+            inputMode="numeric"
+            maxLength={4}
+            value={confirmPin}
+            onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, ''))}
+            disabled={isSubmitting}
+          />
+
+          {error && <p className="form-error">{error}</p>}
 
           <div className="modal-actions">
-            <button type="button" className="btn btn-secondary" onClick={onClose}>Close</button>
-            <button type="button" className="btn btn-primary btn-icon" onClick={handleCopy}>
-              {copied ? <><Check size={16} /> Copied!</> : <><Copy size={16} /> Copy Invite</>}
-            </button>
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>Add User</button>
           </div>
-        </div>
+        </form>
       </div>
     </div>
   );
 }
 
 export default function ManagePage() {
-  const { items, warehouses, categories, users, addItem, addWarehouse, updateUser, currentUser } = useApp();
+  const {
+    items,
+    warehouses,
+    categories,
+    users,
+    addItem,
+    addWarehouse,
+    register,
+    updateUser,
+    currentUser,
+    apiError,
+  } = useApp();
+
   const [tab, setTab] = useState('items');
   const [search, setSearch] = useState('');
   const [showAddItem, setShowAddItem] = useState(false);
   const [showAddWarehouse, setShowAddWarehouse] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
+  const [showAddUser, setShowAddUser] = useState(false);
+  const [actionError, setActionError] = useState('');
 
   if (currentUser?.role !== 'manager') {
     return (
@@ -188,32 +295,59 @@ export default function ManagePage() {
 
   const activeWarehouses = warehouses.filter((w) => w.isActive);
 
+  const handleToggleRole = async (user, managerCount) => {
+    if (user.id === currentUser.id) return;
+    if (user.role === 'manager' && managerCount === 1) return;
+
+    setActionError('');
+    const result = await updateUser(user.id, { role: user.role === 'manager' ? 'staff' : 'manager' });
+    if (!result.ok) setActionError(result.error || 'Unable to update role.');
+  };
+
+  const handleToggleActive = async (user) => {
+    if (user.id === currentUser.id) return;
+
+    setActionError('');
+    const result = await updateUser(user.id, { isActive: user.isActive === false });
+    if (!result.ok) setActionError(result.error || 'Unable to update status.');
+  };
+
   return (
     <div className="page">
-      <Header title="Manage" subtitle="Items & Warehouses" />
+      <Header title="Manage" subtitle="Items, Warehouses, and Team" />
 
       <div className="page-content">
-        {/* Tab switcher */}
         <div className="tab-bar">
           <button
             className={`tab ${tab === 'items' ? 'active' : ''}`}
-            onClick={() => { setTab('items'); setSearch(''); }}
+            onClick={() => {
+              setTab('items');
+              setSearch('');
+            }}
           >
             <Package size={16} /> Items ({items.filter((i) => i.isActive).length})
           </button>
           <button
             className={`tab ${tab === 'warehouses' ? 'active' : ''}`}
-            onClick={() => { setTab('warehouses'); setSearch(''); }}
+            onClick={() => {
+              setTab('warehouses');
+              setSearch('');
+            }}
           >
             <MapPin size={16} /> Warehouses ({activeWarehouses.length})
           </button>
           <button
             className={`tab ${tab === 'staff' ? 'active' : ''}`}
-            onClick={() => { setTab('staff'); setSearch(''); }}
+            onClick={() => {
+              setTab('staff');
+              setSearch('');
+            }}
           >
-            <Users size={16} /> Staff ({users.length})
+            <Users size={16} /> Team ({users.length})
           </button>
         </div>
+
+        {(actionError || apiError) && <p className="form-error">{actionError || apiError}</p>}
 
         {tab === 'items' && (
           <>
@@ -231,7 +365,7 @@ export default function ManagePage() {
                     <h3>{item.name}</h3>
                     <span className="manage-item-meta">{item.category} · {item.unit}</span>
                   </div>
-                  <button className="btn-ghost" title="Edit">
+                  <button className="btn-ghost" title="Edit" disabled>
                     <Edit2 size={16} />
                   </button>
                 </div>
@@ -257,7 +391,7 @@ export default function ManagePage() {
                     <h3>{w.name}</h3>
                     <span className="manage-item-meta">{w.address || 'No address'}</span>
                   </div>
-                  <button className="btn-ghost" title="Edit">
+                  <button className="btn-ghost" title="Edit" disabled>
                     <Edit2 size={16} />
                   </button>
                 </div>
@@ -273,12 +407,13 @@ export default function ManagePage() {
             u.displayName.toLowerCase().includes(search.toLowerCase()) ||
             u.username.toLowerCase().includes(search.toLowerCase())
           );
+
           return (
             <>
               <div className="manage-toolbar">
-                <SearchBar value={search} onChange={setSearch} placeholder="Search staff..." />
-                <button className="btn btn-primary btn-icon" onClick={() => setShowInvite(true)}>
-                  <UserPlus size={18} /> Invite
+                <SearchBar value={search} onChange={setSearch} placeholder="Search team..." />
+                <button className="btn btn-primary btn-icon" onClick={() => setShowAddUser(true)}>
+                  <UserPlus size={18} /> Add User
                 </button>
               </div>
 
@@ -307,22 +442,20 @@ export default function ManagePage() {
                       </div>
 
                       <div className="staff-actions">
-                        {/* Toggle role */}
                         <button
                           className="btn-ghost staff-action-btn"
                           title={isManager ? 'Downgrade to Staff' : 'Promote to Manager'}
                           disabled={isSelf || isLastManager}
-                          onClick={() => updateUser(user.id, { role: isManager ? 'staff' : 'manager' })}
+                          onClick={() => handleToggleRole(user, managerCount)}
                         >
                           {isManager ? <ShieldOff size={16} /> : <ShieldCheck size={16} />}
                         </button>
 
-                        {/* Toggle active status */}
                         <button
                           className="btn-ghost staff-action-btn"
                           title={isActive ? 'Deactivate account' : 'Activate account'}
                           disabled={isSelf}
-                          onClick={() => updateUser(user.id, { isActive: !isActive })}
+                          onClick={() => handleToggleActive(user)}
                         >
                           {isActive ? <UserX size={16} /> : <UserCheck size={16} />}
                         </button>
@@ -331,7 +464,7 @@ export default function ManagePage() {
                   );
                 })}
               </div>
-              <div className="list-count">{filteredUsers.length} staff member{filteredUsers.length !== 1 ? 's' : ''}</div>
+              <div className="list-count">{filteredUsers.length} team member{filteredUsers.length !== 1 ? 's' : ''}</div>
             </>
           );
         })()}
@@ -339,7 +472,7 @@ export default function ManagePage() {
 
       {showAddItem && (
         <AddItemModal
-          categories={categories}
+          categories={categories.length ? categories : ['Tea']}
           onAdd={addItem}
           onClose={() => setShowAddItem(false)}
         />
@@ -352,7 +485,12 @@ export default function ManagePage() {
         />
       )}
 
-      {showInvite && <InviteModal onClose={() => setShowInvite(false)} />}
+      {showAddUser && (
+        <AddUserModal
+          onAdd={register}
+          onClose={() => setShowAddUser(false)}
+        />
+      )}
     </div>
   );
 }

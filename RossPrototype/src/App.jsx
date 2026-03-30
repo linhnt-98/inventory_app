@@ -25,7 +25,27 @@ function SetupRoute({ children }) {
 }
 
 function AppRoutes() {
-  const { currentUser, bootstrapRequired } = useApp();
+  const { currentUser, bootstrapRequired, isInitializing, apiError } = useApp();
+
+  if (isInitializing) {
+    return (
+      <div className="page">
+        <div className="page-content empty-state">
+          <p>Loading inventory data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (apiError && !currentUser && !bootstrapRequired) {
+    return (
+      <div className="page">
+        <div className="page-content empty-state">
+          <p>{apiError}</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>
