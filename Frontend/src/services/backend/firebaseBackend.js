@@ -1,7 +1,6 @@
-import { initializeApp } from 'firebase/app';
-import { getAnalytics } from 'firebase/analytics';
-import { getAuth } from 'firebase/auth';
-import { doc, getDoc, getFirestore, setDoc } from 'firebase/firestore';
+import { getApp, getApps, initializeApp } from 'firebase/app';
+import { getAnalytics, isSupported as isAnalyticsSupported } from 'firebase/analytics';
+import { doc, getDoc, getFirestore, initializeFirestore, setDoc } from 'firebase/firestore';
 import {
   USERS,
   WAREHOUSES,
@@ -22,16 +21,11 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const analytics =
-  typeof window !== 'undefined' && firebaseConfig.measurementId
-    ? getAnalytics(app)
-    : null;
-const db = getFirestore(app);
+let firebaseClients = null;
 
 const STATE_COLLECTION = 'app_state';
 const STATE_DOC_ID = 'inventory';
+const FIRESTORE_NETWORK_TIMEOUT_MS = 12000;
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -80,6 +74,84 @@ function ensureFirebaseConfig() {
   }
 }
 
+function withTimeout(promise, timeoutMs = FIRESTORE_NETWORK_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error('Firestore request timed out. If you use an ad blocker/privacy extension, allow firestore.googleapis.com and reload.'));
+    }, timeoutMs);
+
+    promise
+      .then((result) => {
+        clearTimeout(timer);
+        resolve(result);
+      })
+      .catch((error) => {
+        clearTimeout(timer);
+        reject(error);
+      });
+  });
+}
+
+function toFriendlyFirebaseError(error) {
+  const rawMessage = String(error?.message || '');
+  const lowerMessage = rawMessage.toLowerCase();
+
+  if (
+    lowerMessage.includes('blocked_by_client')
+    || lowerMessage.includes('firestore/listen/channel')
+    || lowerMessage.includes('failed to fetch')
+  ) {
+    return new Error('Browser privacy/ad-block settings are blocking Firestore network requests. Allow firestore.googleapis.com (or test in Incognito without extensions) and refresh.');
+  }
+
+  if (error?.code === 'permission-denied') {
+    return new Error('Firestore permission denied. Check your Firestore security rules for this project.');
+  }
+
+  if (error?.code === 'unavailable' || error?.code === 'deadline-exceeded') {
+    return new Error('Firestore is temporarily unavailable or timing out. Check your network and try again.');
+  }
+
+  return error instanceof Error ? error : new Error('Unable to reach Firestore.');
+}
+
+function getFirebaseClients() {
+  if (firebaseClients) {
+    return firebaseClients;
+  }
+
+  ensureFirebaseConfig();
+
+  const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+  let db;
+  try {
+    db = initializeFirestore(app, {
+      experimentalAutoDetectLongPolling: true,
+      useFetchStreams: false,
+    });
+  } catch {
+    db = getFirestore(app);
+  }
+
+  firebaseClients = { app, db, analytics: null };
+
+  if (typeof window !== 'undefined' && firebaseConfig.measurementId) {
+    isAnalyticsSupported()
+      .then((supported) => {
+        if (supported && firebaseClients) {
+          firebaseClients.analytics = getAnalytics(app);
+        }
+      })
+      .catch(() => {
+        if (firebaseClients) {
+          firebaseClients.analytics = null;
+        }
+      });
+  }
+
+  return firebaseClients;
+}
+
 function normalizeUsers(users) {
   return users.map((user) => ({
     ...user,
@@ -101,28 +173,39 @@ function normalizeStateShape(state) {
 }
 
 export function createFirebaseBackend() {
-  const stateRef = doc(db, STATE_COLLECTION, STATE_DOC_ID);
+  const getStateRef = () => {
+    const { db } = getFirebaseClients();
+    return doc(db, STATE_COLLECTION, STATE_DOC_ID);
+  };
 
   async function loadStoredState() {
-    ensureFirebaseConfig();
+    try {
+      const stateRef = getStateRef();
+      const snapshot = await withTimeout(getDoc(stateRef));
+      if (!snapshot.exists()) {
+        const seeded = buildDefaultState();
+        await withTimeout(setDoc(stateRef, seeded));
+        return seeded;
+      }
 
-    const snapshot = await getDoc(stateRef);
-    if (!snapshot.exists()) {
-      const seeded = buildDefaultState();
-      await setDoc(stateRef, seeded);
-      return seeded;
+      return normalizeStateShape(snapshot.data());
+    } catch (error) {
+      throw toFriendlyFirebaseError(error);
     }
-
-    return normalizeStateShape(snapshot.data());
   }
 
   async function saveStoredState(state) {
-    const normalized = normalizeStateShape({
-      ...state,
-      updatedAt: Date.now(),
-    });
-    await setDoc(stateRef, normalized);
-    return normalized;
+    try {
+      const stateRef = getStateRef();
+      const normalized = normalizeStateShape({
+        ...state,
+        updatedAt: Date.now(),
+      });
+      await withTimeout(setDoc(stateRef, normalized));
+      return normalized;
+    } catch (error) {
+      throw toFriendlyFirebaseError(error);
+    }
   }
 
   return {

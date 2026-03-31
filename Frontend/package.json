@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:firebase": "vite --mode firebase",
+    "dev:fastapi": "vite --mode fastapi",
     "build": "vite build",
+    "build:firebase": "vite build --mode firebase",
+    "build:fastapi": "vite build --mode fastapi",
     "preview": "vite preview"
   },
   "dependencies": {
