@@ -1,5 +1,7 @@
-import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../../Firebase';
+import { initializeApp } from 'firebase/app';
+import { getAnalytics } from 'firebase/analytics';
+import { getAuth } from 'firebase/auth';
+import { doc, getDoc, getFirestore, setDoc } from 'firebase/firestore';
 import {
   USERS,
   WAREHOUSES,
@@ -9,6 +11,24 @@ import {
   INITIAL_TRANSACTIONS,
 } from '../../data/mockData';
 import { ok, fail } from './types';
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const analytics =
+  typeof window !== 'undefined' && firebaseConfig.measurementId
+    ? getAnalytics(app)
+    : null;
+const db = getFirestore(app);
 
 const STATE_COLLECTION = 'app_state';
 const STATE_DOC_ID = 'inventory';
@@ -56,7 +76,7 @@ function buildDefaultState() {
 function ensureFirebaseConfig() {
   const projectId = import.meta.env.VITE_FIREBASE_PROJECT_ID;
   if (!projectId) {
-    throw new Error('Firebase is not configured. Set VITE_FIREBASE_PROJECT_ID and related keys in .env.local.');
+    throw new Error('Firebase is not configured. Set VITE_FIREBASE_PROJECT_ID and related keys in your env files.');
   }
 }
 

@@ -17,6 +17,10 @@ lerna-debug.log*
 .env.development.local
 .env.test.local
 .env.production.local
+*.env.*
+!.env.example
+!.env.fastapi.example
+!.env.firebase.example
 
 # Local history, caches, and IDE specific files
 .DS_Store
