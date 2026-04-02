@@ -460,6 +460,65 @@ export function createFastApiBackend() {
     }
   }
 
+  async function exportData(_state, options = {}) {
+    try {
+      const data = await apiRequest('/api/v1/data/export', {
+        method: 'POST',
+        auth: true,
+        body: {
+          format: 'json',
+          include_transactions: options.includeTransactions ?? true,
+          include_users: options.includeUsers ?? true,
+          include_user_credentials: options.includeUserCredentials ?? false,
+        },
+      });
+
+      return { ok: true, data: { snapshot: data } };
+    } catch (error) {
+      return { ok: false, error: toErrorMessage(error, 'Unable to export data.') };
+    }
+  }
+
+  async function importDataDryRun(_state, payload, options = {}) {
+    try {
+      const result = await apiRequest('/api/v1/data/import/dry-run', {
+        method: 'POST',
+        auth: true,
+        body: {
+          payload,
+          mode: options.mode || 'merge',
+          strict: options.strict ?? true,
+          include_transactions: options.includeTransactions ?? true,
+          include_users: options.includeUsers ?? true,
+        },
+      });
+
+      return { ok: true, data: result };
+    } catch (error) {
+      return { ok: false, error: toErrorMessage(error, 'Unable to validate import payload.') };
+    }
+  }
+
+  async function importDataCommit(_state, payload, options = {}) {
+    try {
+      const result = await apiRequest('/api/v1/data/import/commit', {
+        method: 'POST',
+        auth: true,
+        body: {
+          payload,
+          mode: options.mode || 'merge',
+          strict: options.strict ?? true,
+          include_transactions: options.includeTransactions ?? true,
+          include_users: options.includeUsers ?? true,
+        },
+      });
+
+      return { ok: true, data: result };
+    } catch (error) {
+      return { ok: false, error: toErrorMessage(error, 'Unable to import data.') };
+    }
+  }
+
   function logout() {
     setToken(null);
   }
@@ -477,6 +536,9 @@ export function createFastApiBackend() {
     stockIn,
     stockOut,
     editStock,
+    exportData,
+    importDataDryRun,
+    importDataCommit,
     logout,
   };
 }

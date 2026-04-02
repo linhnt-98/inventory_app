@@ -466,6 +466,18 @@ export function createFirebaseBackend() {
       return ok({ stock, transactions });
     },
 
+    async exportData() {
+      return fail('Data import/export is currently supported on FastAPI backend only.');
+    },
+
+    async importDataDryRun() {
+      return fail('Data import/export is currently supported on FastAPI backend only.');
+    },
+
+    async importDataCommit() {
+      return fail('Data import/export is currently supported on FastAPI backend only.');
+    },
+
     logout() {},
   };
 }

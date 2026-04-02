@@ -14,6 +14,9 @@ import {
   UserCheck,
   UserX,
   UserPlus,
+  Upload,
+  Download,
+  Database,
 } from 'lucide-react';
 
 function AddItemModal({ categories, onAdd, onClose }) {
@@ -267,6 +270,9 @@ export default function ManagePage() {
     addWarehouse,
     register,
     updateUser,
+    exportData,
+    importDataDryRun,
+    importDataCommit,
     currentUser,
     apiError,
   } = useApp();
@@ -277,6 +283,12 @@ export default function ManagePage() {
   const [showAddWarehouse, setShowAddWarehouse] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
   const [actionError, setActionError] = useState('');
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImportDryRunning, setIsImportDryRunning] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importText, setImportText] = useState('');
+  const [importPayload, setImportPayload] = useState(null);
+  const [dryRunResult, setDryRunResult] = useState(null);
 
   if (currentUser?.role !== 'manager') {
     return (
@@ -312,6 +324,134 @@ export default function ManagePage() {
     if (!result.ok) setActionError(result.error || 'Unable to update status.');
   };
 
+  const handleExport = async () => {
+    setActionError('');
+    setIsExporting(true);
+
+    const result = await exportData({
+      includeTransactions: true,
+      includeUsers: true,
+      includeUserCredentials: false,
+    });
+
+    setIsExporting(false);
+
+    if (!result.ok) {
+      setActionError(result.error || 'Unable to export data.');
+      return;
+    }
+
+    const snapshot = result.data?.snapshot;
+    if (!snapshot) {
+      setActionError('Export returned empty payload.');
+      return;
+    }
+
+    const exportedAt = snapshot?.meta?.exported_at || new Date().toISOString();
+    const timestamp = exportedAt.replace(/[:.]/g, '-');
+    const schemaVersion = snapshot?.meta?.app_schema_version || 'unknown-schema';
+    const filename = `inventory_export_${schemaVersion}_${timestamp}.json`;
+
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportFile = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setActionError('');
+    setDryRunResult(null);
+
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      setImportText(text);
+      setImportPayload(parsed);
+    } catch {
+      setImportText('');
+      setImportPayload(null);
+      setActionError('Invalid JSON file. Please upload a valid export snapshot.');
+    }
+
+    event.target.value = '';
+  };
+
+  const handleDryRun = async () => {
+    if (!importPayload) {
+      setActionError('Upload a snapshot JSON first.');
+      return;
+    }
+
+    setActionError('');
+    setIsImportDryRunning(true);
+
+    const result = await importDataDryRun(importPayload, {
+      mode: 'merge',
+      strict: true,
+      includeTransactions: true,
+      includeUsers: true,
+    });
+
+    setIsImportDryRunning(false);
+
+    if (!result.ok) {
+      setDryRunResult(null);
+      setActionError(result.error || 'Import dry-run failed.');
+      return;
+    }
+
+    setDryRunResult(result.data);
+  };
+
+  const handleCommitImport = async () => {
+    if (!importPayload) {
+      setActionError('Upload a snapshot JSON first.');
+      return;
+    }
+
+    if (!dryRunResult?.ok) {
+      setActionError('Run a successful dry-run before commit.');
+      return;
+    }
+
+    if ((dryRunResult.errors || []).length > 0) {
+      setActionError('Resolve dry-run errors before commit.');
+      return;
+    }
+
+    const confirmed = window.confirm('This will merge imported data into the current database. Continue?');
+    if (!confirmed) return;
+
+    setActionError('');
+    setIsImporting(true);
+
+    const result = await importDataCommit(importPayload, {
+      mode: 'merge',
+      strict: true,
+      includeTransactions: true,
+      includeUsers: true,
+    });
+
+    setIsImporting(false);
+
+    if (!result.ok) {
+      setActionError(result.error || 'Import failed.');
+      return;
+    }
+
+    setDryRunResult(null);
+    setImportPayload(null);
+    setImportText('');
+  };
+
   return (
     <div className="page">
       <Header title="Manage" subtitle="Items, Warehouses, and Team" />
@@ -344,6 +484,15 @@ export default function ManagePage() {
             }}
           >
             <Users size={16} /> Team ({users.length})
+          </button>
+          <button
+            className={`tab ${tab === 'data' ? 'active' : ''}`}
+            onClick={() => {
+              setTab('data');
+              setSearch('');
+            }}
+          >
+            <Database size={16} /> Data
           </button>
         </div>
 
@@ -468,6 +617,82 @@ export default function ManagePage() {
             </>
           );
         })()}
+
+        {tab === 'data' && (
+          <>
+            <div className="manage-toolbar">
+              <div className="data-io-actions">
+                <button
+                  className="btn btn-primary btn-icon"
+                  onClick={handleExport}
+                  disabled={isExporting || isImportDryRunning || isImporting}
+                >
+                  <Download size={18} /> {isExporting ? 'Exporting...' : 'Export Snapshot JSON'}
+                </button>
+
+                <label className="btn btn-secondary btn-icon" htmlFor="import-file-input">
+                  <Upload size={18} /> Upload Snapshot JSON
+                </label>
+                <input
+                  id="import-file-input"
+                  type="file"
+                  accept="application/json,.json"
+                  onChange={handleImportFile}
+                  style={{ display: 'none' }}
+                />
+              </div>
+            </div>
+
+            <div className="manage-list">
+              <div className="manage-item data-io-card">
+                <div className="manage-item-info">
+                  <h3>Import Preview</h3>
+                  <span className="manage-item-meta">
+                    {importPayload ? 'Snapshot loaded. Run dry-run to validate.' : 'No file loaded yet.'}
+                  </span>
+                </div>
+                <button
+                  className="btn btn-secondary"
+                  onClick={handleDryRun}
+                  disabled={!importPayload || isImportDryRunning || isImporting}
+                >
+                  {isImportDryRunning ? 'Validating...' : 'Run Dry-Run'}
+                </button>
+              </div>
+
+              {dryRunResult && (
+                <div className="manage-item data-io-report">
+                  <div className="manage-item-info">
+                    <h3>Dry-Run Result</h3>
+                    <span className="manage-item-meta">
+                      Errors: {(dryRunResult.errors || []).length} · Warnings: {(dryRunResult.warnings || []).length}
+                    </span>
+                    <span className="manage-item-meta">
+                      Items: {dryRunResult.summary?.entity_counts?.items ?? 0} · Warehouses: {dryRunResult.summary?.entity_counts?.warehouses ?? 0} · Transactions: {dryRunResult.summary?.entity_counts?.stock_transactions ?? 0}
+                    </span>
+                  </div>
+                  <button
+                    className="btn btn-primary"
+                    onClick={handleCommitImport}
+                    disabled={isImporting || (dryRunResult.errors || []).length > 0}
+                  >
+                    {isImporting ? 'Importing...' : 'Commit Import'}
+                  </button>
+                </div>
+              )}
+
+              {importText && (
+                <div className="manage-item data-io-text-preview">
+                  <div className="manage-item-info">
+                    <h3>Loaded Snapshot</h3>
+                    <span className="manage-item-meta">Preview (first 800 chars)</span>
+                    <pre className="data-io-pre">{importText.slice(0, 800)}{importText.length > 800 ? '…' : ''}</pre>
+                  </div>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       {showAddItem && (

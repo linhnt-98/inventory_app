@@ -227,5 +227,17 @@ export function createLocalBackend() {
         transactions: [newTransaction, ...state.transactions],
       });
     },
+
+    exportData() {
+      return fail('Data import/export is currently supported on FastAPI backend only.');
+    },
+
+    importDataDryRun() {
+      return fail('Data import/export is currently supported on FastAPI backend only.');
+    },
+
+    importDataCommit() {
+      return fail('Data import/export is currently supported on FastAPI backend only.');
+    },
   };
 }

@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .config import settings
 from .database import Base, SessionLocal, engine
-from .routers import auth, bootstrap, health, items, lookups, stock, users, warehouses
+from .routers import auth, bootstrap, data_io, health, items, lookups, stock, users, warehouses
 from .seed import seed_defaults
 
 app = FastAPI(
@@ -39,3 +39,4 @@ app.include_router(lookups.router, prefix=api_prefix)
 app.include_router(warehouses.router, prefix=api_prefix)
 app.include_router(items.router, prefix=api_prefix)
 app.include_router(stock.router, prefix=api_prefix)
+app.include_router(data_io.router, prefix=api_prefix)

@@ -1493,6 +1493,33 @@ input, select, button, textarea {
   gap: 6px;
 }
 
+.data-io-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.data-io-card,
+.data-io-report,
+.data-io-text-preview {
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.data-io-pre {
+  margin-top: 8px;
+  padding: 10px;
+  border-radius: 8px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  font-size: 0.72rem;
+  color: var(--gray-700);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow: auto;
+}
+
 .manage-item {
   display: flex;
   align-items: center;

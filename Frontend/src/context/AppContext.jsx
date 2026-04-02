@@ -178,6 +178,22 @@ export function AppProvider({ children }) {
     runMutation(() => backend.updateUser(state, { id, ...changes })),
   [state, runMutation]);
 
+  const exportData = useCallback((options = {}) =>
+    backend.exportData(state, options),
+  [state]);
+
+  const importDataDryRun = useCallback((payload, options = {}) =>
+    backend.importDataDryRun(state, payload, options),
+  [state]);
+
+  const importDataCommit = useCallback(async (payload, options = {}) => {
+    const result = await backend.importDataCommit(state, payload, options);
+    if (result?.ok) {
+      await initialize();
+    }
+    return result;
+  }, [state, initialize]);
+
   const getStockForWarehouse = useCallback((warehouseId) => {
     const wStock = state.stock[warehouseId] || {};
     return state.items
@@ -215,6 +231,9 @@ export function AppProvider({ children }) {
     register,
     resetPin,
     updateUser,
+    exportData,
+    importDataDryRun,
+    importDataCommit,
     getStockForWarehouse,
     getTransactions,
   }), [
@@ -235,6 +254,9 @@ export function AppProvider({ children }) {
     register,
     resetPin,
     updateUser,
+    exportData,
+    importDataDryRun,
+    importDataCommit,
     getStockForWarehouse,
     getTransactions,
   ]);
