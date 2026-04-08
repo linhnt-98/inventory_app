@@ -3,6 +3,10 @@ import { useApp } from '../context/AppContext';
 import Header from '../components/Header';
 import SearchBar from '../components/SearchBar';
 import {
+  csvZipFileToSnapshot,
+  snapshotToCsvZipBlob,
+} from '../services/dataIO/csvSnapshot';
+import {
   Plus,
   Edit2,
   Package,
@@ -289,6 +293,7 @@ export default function ManagePage() {
   const [importText, setImportText] = useState('');
   const [importPayload, setImportPayload] = useState(null);
   const [dryRunResult, setDryRunResult] = useState(null);
+  const [importSourceLabel, setImportSourceLabel] = useState('');
 
   if (currentUser?.role !== 'manager') {
     return (
@@ -363,6 +368,45 @@ export default function ManagePage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportCsvPack = async () => {
+    setActionError('');
+    setIsExporting(true);
+
+    const result = await exportData({
+      includeTransactions: true,
+      includeUsers: true,
+      includeUserCredentials: false,
+    });
+
+    setIsExporting(false);
+
+    if (!result.ok) {
+      setActionError(result.error || 'Unable to export data.');
+      return;
+    }
+
+    const snapshot = result.data?.snapshot;
+    if (!snapshot) {
+      setActionError('Export returned empty payload.');
+      return;
+    }
+
+    const exportedAt = snapshot?.meta?.exported_at || new Date().toISOString();
+    const timestamp = exportedAt.replace(/[:.]/g, '-');
+    const schemaVersion = snapshot?.meta?.app_schema_version || 'unknown-schema';
+    const filename = `inventory_export_${schemaVersion}_${timestamp}_csv_pack.zip`;
+
+    const zipBlob = await snapshotToCsvZipBlob(snapshot);
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   const handleImportFile = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -375,10 +419,44 @@ export default function ManagePage() {
       const parsed = JSON.parse(text);
       setImportText(text);
       setImportPayload(parsed);
+      setImportSourceLabel(file.name);
     } catch {
       setImportText('');
       setImportPayload(null);
+      setImportSourceLabel('');
       setActionError('Invalid JSON file. Please upload a valid export snapshot.');
+    }
+
+    event.target.value = '';
+  };
+
+  const handleImportCsvPack = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setActionError('');
+    setDryRunResult(null);
+
+    try {
+      if (!file.name.toLowerCase().endsWith('.zip')) {
+        setImportText('');
+        setImportPayload(null);
+        setImportSourceLabel('');
+        setActionError('Please upload a ZIP file exported from CSV Pack.');
+        event.target.value = '';
+        return;
+      }
+
+      const snapshot = await csvZipFileToSnapshot(file);
+
+      setImportPayload(snapshot);
+      setImportSourceLabel(file.name);
+      setImportText(JSON.stringify(snapshot, null, 2));
+    } catch (error) {
+      setImportText('');
+      setImportPayload(null);
+      setImportSourceLabel('');
+      setActionError(error?.message || 'Unable to parse CSV pack.');
     }
 
     event.target.value = '';
@@ -630,6 +708,14 @@ export default function ManagePage() {
                   <Download size={18} /> {isExporting ? 'Exporting...' : 'Export Snapshot JSON'}
                 </button>
 
+                <button
+                  className="btn btn-secondary btn-icon"
+                  onClick={handleExportCsvPack}
+                  disabled={isExporting || isImportDryRunning || isImporting}
+                >
+                  <Download size={18} /> {isExporting ? 'Exporting...' : 'Export CSV Pack'}
+                </button>
+
                 <label className="btn btn-secondary btn-icon" htmlFor="import-file-input">
                   <Upload size={18} /> Upload Snapshot JSON
                 </label>
@@ -638,6 +724,17 @@ export default function ManagePage() {
                   type="file"
                   accept="application/json,.json"
                   onChange={handleImportFile}
+                  style={{ display: 'none' }}
+                />
+
+                <label className="btn btn-secondary btn-icon" htmlFor="import-csv-pack-input">
+                  <Upload size={18} /> Upload CSV Pack (.zip)
+                </label>
+                <input
+                  id="import-csv-pack-input"
+                  type="file"
+                  accept=".zip,application/zip"
+                  onChange={handleImportCsvPack}
                   style={{ display: 'none' }}
                 />
               </div>
@@ -650,6 +747,9 @@ export default function ManagePage() {
                   <span className="manage-item-meta">
                     {importPayload ? 'Snapshot loaded. Run dry-run to validate.' : 'No file loaded yet.'}
                   </span>
+                  {importSourceLabel && (
+                    <span className="manage-item-meta">Source: {importSourceLabel}</span>
+                  )}
                 </div>
                 <button
                   className="btn btn-secondary"

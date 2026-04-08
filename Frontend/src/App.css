@@ -96,7 +96,7 @@ input, select, button, textarea {
   min-height: var(--header-height);
   position: sticky;
   top: 0;
-  z-index: 100;
+  z-index: 1200;
 }
 
 .header-left {
@@ -480,6 +480,8 @@ input, select, button, textarea {
 
 /* --- Map --- */
 .map-container {
+  position: relative;
+  z-index: 1;
   height: 220px;
   border-radius: var(--radius);
   overflow: hidden;
