@@ -21,7 +21,10 @@ import {
   Upload,
   Download,
   Database,
+  Trash2,
 } from 'lucide-react';
+
+const DEFAULT_ITEM_UNITS = ['bags', 'boxes', 'tins', 'pcs', 'kg', 'bottles', 'units'];
 
 function AddItemModal({ categories, onAdd, onClose }) {
   const [name, setName] = useState('');
@@ -32,11 +35,31 @@ function AddItemModal({ categories, onAdd, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!name.trim() || isSubmitting) return;
+    if (isSubmitting) return;
+
+    const normalizedName = name.trim();
+    const normalizedCategory = category.trim();
+    const normalizedUnit = unit.trim();
+    if (!normalizedName) {
+      setError('Item name is required.');
+      return;
+    }
+    if (!normalizedCategory) {
+      setError('Category is required.');
+      return;
+    }
+    if (!normalizedUnit) {
+      setError('Unit is required.');
+      return;
+    }
 
     setIsSubmitting(true);
     setError('');
-    const result = await onAdd({ name: name.trim(), category, unit });
+    const result = await onAdd({
+      name: normalizedName,
+      category: normalizedCategory,
+      unit: normalizedUnit,
+    });
     setIsSubmitting(false);
 
     if (!result.ok) {
@@ -66,34 +89,145 @@ function AddItemModal({ categories, onAdd, onClose }) {
           />
 
           <label className="modal-label">Category</label>
-          <select
+          <input
             className="modal-input"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
+            list="category-options"
+            placeholder="e.g. Green Tea"
             disabled={isSubmitting}
-          >
+          />
+          <datalist id="category-options">
             {categories.map((c) => (
-              <option key={c} value={c}>{c}</option>
+              <option key={c} value={c} />
             ))}
-          </select>
+          </datalist>
 
           <label className="modal-label">Unit</label>
-          <select
+          <input
             className="modal-input"
             value={unit}
             onChange={(e) => setUnit(e.target.value)}
+            list="unit-options"
+            placeholder="e.g. boxes"
             disabled={isSubmitting}
-          >
-            {['bags', 'boxes', 'tins', 'pcs', 'kg', 'bottles'].map((u) => (
-              <option key={u} value={u}>{u}</option>
+          />
+          <datalist id="unit-options">
+            {DEFAULT_ITEM_UNITS.map((u) => (
+              <option key={u} value={u} />
             ))}
-          </select>
+          </datalist>
 
           {error && <p className="form-error">{error}</p>}
 
           <div className="modal-actions">
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
-            <button type="submit" className="btn btn-primary" disabled={!name.trim() || isSubmitting}>Add Item</button>
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>Add Item</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function EditItemModal({ item, categories, onSave, onClose }) {
+  const [name, setName] = useState(item.name || '');
+  const [category, setCategory] = useState(item.category || categories[0] || 'Tea');
+  const [unit, setUnit] = useState(item.unit || 'units');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (isSubmitting) return;
+
+    const normalizedName = name.trim();
+    const normalizedCategory = category.trim();
+    const normalizedUnit = unit.trim();
+
+    if (!normalizedName) {
+      setError('Item name is required.');
+      return;
+    }
+    if (!normalizedCategory) {
+      setError('Category is required.');
+      return;
+    }
+    if (!normalizedUnit) {
+      setError('Unit is required.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError('');
+
+    const result = await onSave({
+      id: item.id,
+      name: normalizedName,
+      category: normalizedCategory,
+      unit: normalizedUnit,
+    });
+
+    setIsSubmitting(false);
+    if (!result.ok) {
+      setError(result.error || 'Unable to update item.');
+      return;
+    }
+
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(event) => event.stopPropagation()}>
+        <button className="modal-close" onClick={onClose}><X size={20} /></button>
+        <div className="modal-header">
+          <h2>Edit Item</h2>
+        </div>
+
+        <form onSubmit={handleSubmit} className="modal-body">
+          <label className="modal-label">Item Name</label>
+          <input
+            className="modal-input"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            disabled={isSubmitting}
+            autoFocus
+          />
+
+          <label className="modal-label">Category</label>
+          <input
+            className="modal-input"
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+            list="edit-category-options"
+            disabled={isSubmitting}
+          />
+          <datalist id="edit-category-options">
+            {categories.map((cat) => (
+              <option key={cat} value={cat} />
+            ))}
+          </datalist>
+
+          <label className="modal-label">Unit</label>
+          <input
+            className="modal-input"
+            value={unit}
+            onChange={(event) => setUnit(event.target.value)}
+            list="edit-unit-options"
+            disabled={isSubmitting}
+          />
+          <datalist id="edit-unit-options">
+            {DEFAULT_ITEM_UNITS.map((u) => (
+              <option key={u} value={u} />
+            ))}
+          </datalist>
+
+          {error && <p className="form-error">{error}</p>}
+
+          <div className="modal-actions">
+            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={isSubmitting}>Cancel</button>
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>Save Changes</button>
           </div>
         </form>
       </div>
@@ -271,6 +405,8 @@ export default function ManagePage() {
     categories,
     users,
     addItem,
+    editItem,
+    deleteItem,
     addWarehouse,
     register,
     updateUser,
@@ -283,7 +419,9 @@ export default function ManagePage() {
 
   const [tab, setTab] = useState('items');
   const [search, setSearch] = useState('');
+  const [itemStatusFilter, setItemStatusFilter] = useState('active');
   const [showAddItem, setShowAddItem] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
   const [showAddWarehouse, setShowAddWarehouse] = useState(false);
   const [showAddUser, setShowAddUser] = useState(false);
   const [actionError, setActionError] = useState('');
@@ -306,9 +444,21 @@ export default function ManagePage() {
     );
   }
 
-  const filteredItems = items.filter((item) =>
-    item.isActive && item.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredItems = items.filter((item) => {
+    const query = search.toLowerCase();
+    const matchesQuery =
+      item.name.toLowerCase().includes(query)
+      || item.category?.toLowerCase().includes(query)
+      || item.unit?.toLowerCase().includes(query);
+
+    if (!matchesQuery) return false;
+    if (itemStatusFilter === 'active') return item.isActive !== false;
+    if (itemStatusFilter === 'inactive') return item.isActive === false;
+    return true;
+  });
+
+  const activeItemCount = items.filter((item) => item.isActive !== false).length;
+  const inactiveItemCount = items.length - activeItemCount;
 
   const activeWarehouses = warehouses.filter((w) => w.isActive);
 
@@ -327,6 +477,46 @@ export default function ManagePage() {
     setActionError('');
     const result = await updateUser(user.id, { isActive: user.isActive === false });
     if (!result.ok) setActionError(result.error || 'Unable to update status.');
+  };
+
+  const handleEditItem = async (payload) => {
+    setActionError('');
+    const result = await editItem(payload);
+    if (!result.ok) {
+      setActionError(result.error || 'Unable to update item.');
+    }
+    return result;
+  };
+
+  const handleToggleItemActive = async (item) => {
+    setActionError('');
+    const result = await editItem({ id: item.id, isActive: item.isActive === false });
+    if (!result.ok) {
+      setActionError(result.error || 'Unable to update item status.');
+      return;
+    }
+
+    if (editingItem?.id === item.id) {
+      setEditingItem(null);
+    }
+  };
+
+  const handleDeleteItem = async (item) => {
+    const confirmed = window.confirm(
+      `Delete "${item.name}" permanently? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setActionError('');
+    const result = await deleteItem(item.id);
+    if (!result.ok) {
+      setActionError(result.error || 'Unable to delete item.');
+      return;
+    }
+
+    if (editingItem?.id === item.id) {
+      setEditingItem(null);
+    }
   };
 
   const handleExport = async () => {
@@ -543,7 +733,7 @@ export default function ManagePage() {
               setSearch('');
             }}
           >
-            <Package size={16} /> Items ({items.filter((i) => i.isActive).length})
+            <Package size={16} /> Items ({items.length})
           </button>
           <button
             className={`tab ${tab === 'warehouses' ? 'active' : ''}`}
@@ -585,16 +775,65 @@ export default function ManagePage() {
               </button>
             </div>
 
+            <div className="filter-row" style={{ marginBottom: 10 }}>
+              <div className="filter-pills">
+                <button
+                  className={`pill ${itemStatusFilter === 'active' ? 'active' : ''}`}
+                  onClick={() => setItemStatusFilter('active')}
+                >
+                  Active ({activeItemCount})
+                </button>
+                <button
+                  className={`pill ${itemStatusFilter === 'inactive' ? 'active' : ''}`}
+                  onClick={() => setItemStatusFilter('inactive')}
+                >
+                  Inactive ({inactiveItemCount})
+                </button>
+                <button
+                  className={`pill ${itemStatusFilter === 'all' ? 'active' : ''}`}
+                  onClick={() => setItemStatusFilter('all')}
+                >
+                  All ({items.length})
+                </button>
+              </div>
+            </div>
+
             <div className="manage-list">
               {filteredItems.map((item) => (
                 <div key={item.id} className="manage-item">
                   <div className="manage-item-info">
                     <h3>{item.name}</h3>
-                    <span className="manage-item-meta">{item.category} · {item.unit}</span>
+                    <span className="manage-item-meta">
+                      {item.category} · {item.unit}
+                      {item.isActive === false ? ' · Inactive' : ''}
+                    </span>
                   </div>
-                  <button className="btn-ghost" title="Edit" disabled>
-                    <Edit2 size={16} />
-                  </button>
+
+                  <div className="staff-actions">
+                    <button
+                      className="btn-ghost staff-action-btn"
+                      title="Edit item"
+                      onClick={() => setEditingItem(item)}
+                    >
+                      <Edit2 size={16} />
+                    </button>
+
+                    <button
+                      className="btn-ghost staff-action-btn"
+                      title={item.isActive === false ? 'Reactivate item' : 'Deactivate item'}
+                      onClick={() => handleToggleItemActive(item)}
+                    >
+                      {item.isActive === false ? <UserCheck size={16} /> : <UserX size={16} />}
+                    </button>
+
+                    <button
+                      className="btn-ghost staff-action-btn"
+                      title="Delete item"
+                      onClick={() => handleDeleteItem(item)}
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -800,6 +1039,15 @@ export default function ManagePage() {
           categories={categories.length ? categories : ['Tea']}
           onAdd={addItem}
           onClose={() => setShowAddItem(false)}
+        />
+      )}
+
+      {editingItem && (
+        <EditItemModal
+          item={editingItem}
+          categories={categories.length ? categories : ['Tea']}
+          onSave={handleEditItem}
+          onClose={() => setEditingItem(null)}
         />
       )}
 

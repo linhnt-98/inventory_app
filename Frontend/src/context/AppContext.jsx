@@ -158,6 +158,10 @@ export function AppProvider({ children }) {
     runMutation(() => backend.editItem(state, item)),
   [state, runMutation]);
 
+  const deleteItem = useCallback((id) =>
+    runMutation(() => backend.deleteItem(state, { id })),
+  [state, runMutation]);
+
   const addWarehouse = useCallback((warehouse) =>
     runMutation(() => backend.addWarehouse(state, warehouse)),
   [state, runMutation]);
@@ -226,6 +230,7 @@ export function AppProvider({ children }) {
     stockOut,
     addItem,
     editItem,
+    deleteItem,
     editStock,
     addWarehouse,
     register,
@@ -249,6 +254,7 @@ export function AppProvider({ children }) {
     stockOut,
     addItem,
     editItem,
+    deleteItem,
     editStock,
     addWarehouse,
     register,

@@ -348,6 +348,39 @@ export function createFirebaseBackend() {
       return ok({ items });
     },
 
+    async deleteItem(state, payload) {
+      const hasTransactionHistory = state.transactions.some((txn) => txn.itemId === payload.id);
+      if (hasTransactionHistory) {
+        return fail('Item has transaction history and cannot be deleted. Deactivate it instead.');
+      }
+
+      const hasStockOnHand = Object.values(state.stock || {}).some((warehouseStock) => {
+        const quantity = Number((warehouseStock || {})[payload.id] || 0);
+        return quantity > 0;
+      });
+      if (hasStockOnHand) {
+        return fail('Item has stock on hand and cannot be deleted.');
+      }
+
+      const items = state.items.filter((item) => item.id !== payload.id);
+      const stock = Object.fromEntries(
+        Object.entries(state.stock || {}).map(([warehouseId, warehouseStock]) => {
+          const nextWarehouseStock = { ...(warehouseStock || {}) };
+          delete nextWarehouseStock[payload.id];
+          return [warehouseId, nextWarehouseStock];
+        })
+      );
+
+      const nextState = {
+        ...(await loadStoredState()),
+        items,
+        stock,
+      };
+
+      await saveStoredState(nextState);
+      return ok({ items, stock });
+    },
+
     async addWarehouse(state, payload) {
       const newWarehouse = {
         id: nextId(state.warehouses),

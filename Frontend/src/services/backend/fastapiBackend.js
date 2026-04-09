@@ -330,6 +330,28 @@ export function createFastApiBackend() {
     }
   }
 
+  async function deleteItem(state, payload) {
+    try {
+      await apiRequest(`/api/v1/items/${payload.id}`, {
+        method: 'DELETE',
+        auth: true,
+      });
+
+      const items = state.items.filter((item) => item.id !== payload.id);
+      const stock = Object.fromEntries(
+        Object.entries(state.stock || {}).map(([warehouseId, warehouseStock]) => {
+          const nextWarehouseStock = { ...(warehouseStock || {}) };
+          delete nextWarehouseStock[payload.id];
+          return [warehouseId, nextWarehouseStock];
+        })
+      );
+
+      return { ok: true, data: { items, stock } };
+    } catch (error) {
+      return { ok: false, error: toErrorMessage(error, 'Unable to delete item.') };
+    }
+  }
+
   async function addWarehouse(state, payload) {
     try {
       const created = await apiRequest('/api/v1/warehouses', {
@@ -532,6 +554,7 @@ export function createFastApiBackend() {
     updateUser,
     addItem,
     editItem,
+    deleteItem,
     addWarehouse,
     stockIn,
     stockOut,

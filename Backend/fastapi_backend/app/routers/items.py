@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..database import get_db
 from ..dependencies import require_manager
-from ..models import Category, Item, Unit
+from ..models import Category, Item, StockLevel, StockTransaction, Unit
 from ..schemas import ItemCreate, ItemRead, ItemUpdate
 
 router = APIRouter(prefix="/items", tags=["items"])
@@ -70,3 +70,40 @@ def update_item(
     db.commit()
     db.refresh(item)
     return ItemRead.model_validate(item)
+
+
+@router.delete("/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_item(
+    item_id: int,
+    db: Session = Depends(get_db),
+    _manager=Depends(require_manager),
+) -> Response:
+    item = db.get(Item, item_id)
+    if not item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
+    has_transactions = db.scalar(select(StockTransaction.id).where(StockTransaction.item_id == item_id).limit(1))
+    if has_transactions is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Item has transaction history and cannot be deleted. Deactivate it instead.",
+        )
+
+    has_stock_on_hand = db.scalar(
+        select(StockLevel.warehouse_id)
+        .where(StockLevel.item_id == item_id, StockLevel.quantity > 0)
+        .limit(1)
+    )
+    if has_stock_on_hand is not None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Item has stock on hand and cannot be deleted.",
+        )
+
+    stock_level_rows = db.scalars(select(StockLevel).where(StockLevel.item_id == item_id)).all()
+    for stock_level in stock_level_rows:
+        db.delete(stock_level)
+
+    db.delete(item)
+    db.commit()
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

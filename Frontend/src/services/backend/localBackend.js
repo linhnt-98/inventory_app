@@ -659,6 +659,34 @@ export function createLocalBackend() {
       return ok(patch);
     },
 
+    deleteItem(state, payload) {
+      const hasTransactionHistory = state.transactions.some((txn) => txn.itemId === payload.id);
+      if (hasTransactionHistory) {
+        return fail('Item has transaction history and cannot be deleted. Deactivate it instead.');
+      }
+
+      const hasStockOnHand = Object.values(state.stock || {}).some((warehouseStock) => {
+        const quantity = Number((warehouseStock || {})[payload.id] || 0);
+        return quantity > 0;
+      });
+      if (hasStockOnHand) {
+        return fail('Item has stock on hand and cannot be deleted.');
+      }
+
+      const items = state.items.filter((item) => item.id !== payload.id);
+      const stock = Object.fromEntries(
+        Object.entries(state.stock || {}).map(([warehouseId, warehouseStock]) => {
+          const nextWarehouseStock = { ...(warehouseStock || {}) };
+          delete nextWarehouseStock[payload.id];
+          return [warehouseId, nextWarehouseStock];
+        })
+      );
+
+      const patch = { items, stock };
+      persistState({ ...state, ...patch });
+      return ok(patch);
+    },
+
     addWarehouse(state, payload) {
       const newWarehouse = {
         id: nextId(state.warehouses),
