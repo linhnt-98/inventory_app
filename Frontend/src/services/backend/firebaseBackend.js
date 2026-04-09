@@ -160,11 +160,36 @@ function normalizeUsers(users) {
   }));
 }
 
+function normalizeItemVisual(item) {
+  const attributesJson = item?.attributes_json || item?.attributesJson || null;
+  const visual = attributesJson?.visual || {};
+  return {
+    ...item,
+    attributes_json: attributesJson,
+    emoji: visual.value || item?.emoji || '📦',
+    color: visual.bgColor || item?.color || '#e5e7eb',
+  };
+}
+
+function buildItemAttributesFromPayload(payload = {}, existingItem = null) {
+  const existingAttributes = existingItem?.attributes_json || existingItem?.attributesJson || null;
+  const nextAttributes = { ...(existingAttributes || {}) };
+  const currentVisual = nextAttributes.visual || {};
+
+  nextAttributes.visual = {
+    kind: 'emoji',
+    value: payload.emoji || currentVisual.value || existingItem?.emoji || '📦',
+    bgColor: payload.color || currentVisual.bgColor || existingItem?.color || '#e5e7eb',
+  };
+
+  return nextAttributes;
+}
+
 function normalizeStateShape(state) {
   return {
     users: normalizeUsers(state.users || []),
     warehouses: state.warehouses || [],
-    items: state.items || [],
+    items: (state.items || []).map(normalizeItemVisual),
     categories: state.categories || [],
     stock: state.stock || {},
     transactions: state.transactions || [],
@@ -312,12 +337,14 @@ export function createFirebaseBackend() {
     },
 
     async addItem(state, payload) {
+      const attributes_json = buildItemAttributesFromPayload(payload, null);
       const newItem = {
         id: nextId(state.items),
         ...payload,
+        attributes_json,
         isActive: true,
-        emoji: payload.emoji || '📦',
-        color: payload.color || '#e5e7eb',
+        emoji: attributes_json.visual?.value || payload.emoji || '📦',
+        color: attributes_json.visual?.bgColor || payload.color || '#e5e7eb',
       };
 
       const categories = state.categories.includes(payload.category)
@@ -335,8 +362,18 @@ export function createFirebaseBackend() {
     },
 
     async editItem(state, payload) {
+      const existingItem = state.items.find((item) => item.id === payload.id);
+      const attributes_json = buildItemAttributesFromPayload(payload, existingItem);
       const items = state.items.map((item) =>
-        item.id === payload.id ? { ...item, ...payload } : item
+        item.id === payload.id
+          ? {
+              ...item,
+              ...payload,
+              attributes_json,
+              emoji: attributes_json.visual?.value || item.emoji || '📦',
+              color: attributes_json.visual?.bgColor || item.color || '#e5e7eb',
+            }
+          : item
       );
 
       const nextState = {

@@ -76,7 +76,7 @@ function sanitizeStateShape(state) {
   return {
     users,
     warehouses: Array.isArray(state?.warehouses) ? state.warehouses : [],
-    items: Array.isArray(state?.items) ? state.items : [],
+    items: Array.isArray(state?.items) ? state.items.map(normalizeItemVisual) : [],
     categories: Array.isArray(state?.categories) ? state.categories : [],
     stock: state?.stock && typeof state.stock === 'object' ? state.stock : {},
     transactions: Array.isArray(state?.transactions) ? state.transactions : [],
@@ -103,6 +103,31 @@ function inferDeltaFromTransaction(txn) {
   if (txn.type === 'out') return -quantity;
   if (typeof txn.previousQty === 'number') return quantity - txn.previousQty;
   return 0;
+}
+
+function normalizeItemVisual(item) {
+  const attributesJson = item?.attributes_json || item?.attributesJson || null;
+  const visual = attributesJson?.visual || {};
+  return {
+    ...item,
+    attributes_json: attributesJson,
+    emoji: visual.value || item?.emoji || '📦',
+    color: visual.bgColor || item?.color || '#e5e7eb',
+  };
+}
+
+function buildItemAttributesFromPayload(payload = {}, existingItem = null) {
+  const existingAttributes = existingItem?.attributes_json || existingItem?.attributesJson || null;
+  const nextAttributes = { ...(existingAttributes || {}) };
+  const currentVisual = nextAttributes.visual || {};
+
+  nextAttributes.visual = {
+    kind: 'emoji',
+    value: payload.emoji || currentVisual.value || existingItem?.emoji || '📦',
+    bgColor: payload.color || currentVisual.bgColor || existingItem?.color || '#e5e7eb',
+  };
+
+  return nextAttributes;
 }
 
 export function createLocalBackend() {
@@ -635,9 +660,13 @@ export function createLocalBackend() {
     },
 
     addItem(state, payload) {
+      const attributes_json = buildItemAttributesFromPayload(payload, null);
       const newItem = {
         id: nextId(state.items),
         ...payload,
+        attributes_json,
+        emoji: attributes_json.visual?.value || payload.emoji || '📦',
+        color: attributes_json.visual?.bgColor || payload.color || '#e5e7eb',
         isActive: true,
       };
 
@@ -651,8 +680,18 @@ export function createLocalBackend() {
     },
 
     editItem(state, payload) {
+      const existingItem = state.items.find((item) => item.id === payload.id);
+      const attributes_json = buildItemAttributesFromPayload(payload, existingItem);
       const items = state.items.map((item) =>
-        item.id === payload.id ? { ...item, ...payload } : item
+        item.id === payload.id
+          ? {
+              ...item,
+              ...payload,
+              attributes_json,
+              emoji: attributes_json.visual?.value || item.emoji || '📦',
+              color: attributes_json.visual?.bgColor || item.color || '#e5e7eb',
+            }
+          : item
       );
       const patch = { items };
       persistState({ ...state, ...patch });

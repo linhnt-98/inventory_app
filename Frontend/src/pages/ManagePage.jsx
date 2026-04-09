@@ -25,11 +25,57 @@ import {
 } from 'lucide-react';
 
 const DEFAULT_ITEM_UNITS = ['bags', 'boxes', 'tins', 'pcs', 'kg', 'bottles', 'units'];
+const ITEM_ICON_OPTIONS = ['📦', '🍵', '🍃', '☕', '🌿', '🌼', '🌺', '🍂', '🔥', '🫖', '🍶', '🎁', '🥤', '🧋', '🍯', '🥛', '🧁', '🍪'];
+const ITEM_COLOR_OPTIONS = ['#e5e7eb', '#86efac', '#4ade80', '#d4a574', '#fde68a', '#a7f3d0', '#fda4af', '#fdba74', '#bfdbfe', '#fecaca', '#ddd6fe'];
+
+function ItemVisualPicker({ emoji, color, onEmojiChange, onColorChange }) {
+  return (
+    <div className="item-visual-picker">
+      <label className="modal-label">Item Icon</label>
+      <div className="visual-icon-grid">
+        {ITEM_ICON_OPTIONS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            className={`visual-icon-btn ${emoji === option ? 'active' : ''}`}
+            onClick={() => onEmojiChange(option)}
+            title={`Use ${option}`}
+          >
+            {option}
+          </button>
+        ))}
+      </div>
+
+      <label className="modal-label">Tile Color</label>
+      <div className="visual-color-grid">
+        {ITEM_COLOR_OPTIONS.map((option) => (
+          <button
+            key={option}
+            type="button"
+            className={`visual-color-btn ${color === option ? 'active' : ''}`}
+            style={{ background: option }}
+            onClick={() => onColorChange(option)}
+            title={`Use color ${option}`}
+          />
+        ))}
+      </div>
+
+      <div className="visual-preview-row">
+        <span className="visual-preview-label">Preview</span>
+        <div className="visual-preview-chip" style={{ background: color || '#e5e7eb' }}>
+          <span>{emoji || '📦'}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AddItemModal({ categories, onAdd, onClose }) {
   const [name, setName] = useState('');
   const [category, setCategory] = useState(categories[0] || 'Tea');
   const [unit, setUnit] = useState('bags');
+  const [emoji, setEmoji] = useState('📦');
+  const [color, setColor] = useState('#e5e7eb');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -59,6 +105,8 @@ function AddItemModal({ categories, onAdd, onClose }) {
       name: normalizedName,
       category: normalizedCategory,
       unit: normalizedUnit,
+      emoji,
+      color,
     });
     setIsSubmitting(false);
 
@@ -118,6 +166,13 @@ function AddItemModal({ categories, onAdd, onClose }) {
             ))}
           </datalist>
 
+          <ItemVisualPicker
+            emoji={emoji}
+            color={color}
+            onEmojiChange={setEmoji}
+            onColorChange={setColor}
+          />
+
           {error && <p className="form-error">{error}</p>}
 
           <div className="modal-actions">
@@ -134,6 +189,8 @@ function EditItemModal({ item, categories, onSave, onClose }) {
   const [name, setName] = useState(item.name || '');
   const [category, setCategory] = useState(item.category || categories[0] || 'Tea');
   const [unit, setUnit] = useState(item.unit || 'units');
+  const [emoji, setEmoji] = useState(item.emoji || '📦');
+  const [color, setColor] = useState(item.color || '#e5e7eb');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -166,6 +223,8 @@ function EditItemModal({ item, categories, onSave, onClose }) {
       name: normalizedName,
       category: normalizedCategory,
       unit: normalizedUnit,
+      emoji,
+      color,
     });
 
     setIsSubmitting(false);
@@ -222,6 +281,13 @@ function EditItemModal({ item, categories, onSave, onClose }) {
               <option key={u} value={u} />
             ))}
           </datalist>
+
+          <ItemVisualPicker
+            emoji={emoji}
+            color={color}
+            onEmojiChange={setEmoji}
+            onColorChange={setColor}
+          />
 
           {error && <p className="form-error">{error}</p>}
 
@@ -801,6 +867,10 @@ export default function ManagePage() {
             <div className="manage-list">
               {filteredItems.map((item) => (
                 <div key={item.id} className="manage-item">
+                  <div className="manage-item-thumb" style={{ background: item.color || '#e5e7eb' }}>
+                    <span>{item.emoji || '📦'}</span>
+                  </div>
+
                   <div className="manage-item-info">
                     <h3>{item.name}</h3>
                     <span className="manage-item-meta">

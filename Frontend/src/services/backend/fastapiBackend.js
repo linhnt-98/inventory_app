@@ -21,15 +21,41 @@ function mapUser(apiUser) {
   };
 }
 
+function extractVisualFromAttributes(attributesJson) {
+  const visual = attributesJson?.visual || {};
+  return {
+    emoji: visual.value || '📦',
+    color: visual.bgColor || '#e5e7eb',
+  };
+}
+
+function buildVisualAttributes(payload = {}, existingAttributes = null) {
+  const nextAttributes = { ...(existingAttributes || {}) };
+  const currentVisual = nextAttributes.visual || {};
+
+  const nextEmoji = payload.emoji || currentVisual.value || '📦';
+  const nextColor = payload.color || currentVisual.bgColor || '#e5e7eb';
+
+  nextAttributes.visual = {
+    kind: 'emoji',
+    value: nextEmoji,
+    bgColor: nextColor,
+  };
+
+  return nextAttributes;
+}
+
 function mapItem(apiItem, categoriesById, unitsById) {
+  const visual = extractVisualFromAttributes(apiItem.attributes_json);
   return {
     id: apiItem.id,
     name: apiItem.name,
     category: categoriesById.get(apiItem.category_id) || 'Uncategorized',
     unit: unitsById.get(apiItem.unit_id) || 'units',
     isActive: apiItem.is_active,
-    emoji: '📦',
-    color: '#e5e7eb',
+    emoji: visual.emoji,
+    color: visual.color,
+    attributesJson: apiItem.attributes_json || null,
   };
 }
 
@@ -268,8 +294,11 @@ export function createFastApiBackend() {
           category_id: categoryId,
           unit_id: unitId,
           description: payload.description || '',
+          attributes_json: buildVisualAttributes(payload),
         },
       });
+
+      const visual = extractVisualFromAttributes(created.attributes_json || buildVisualAttributes(payload));
 
       const item = {
         id: created.id,
@@ -277,8 +306,9 @@ export function createFastApiBackend() {
         category: categoryName,
         unit: unitName,
         isActive: created.is_active,
-        emoji: '📦',
-        color: '#e5e7eb',
+        emoji: visual.emoji,
+        color: visual.color,
+        attributesJson: created.attributes_json || buildVisualAttributes(payload),
       };
 
       const categories = state.categories.includes(categoryName)
@@ -310,6 +340,14 @@ export function createFastApiBackend() {
         apiPayload.unit_id = await ensureLookupId('unit', payload.unit);
       }
 
+      if (payload.emoji || payload.color || payload.attributesJson) {
+        const existingItem = state.items.find((item) => item.id === payload.id);
+        apiPayload.attributes_json = buildVisualAttributes(
+          payload,
+          payload.attributesJson || existingItem?.attributesJson || null
+        );
+      }
+
       const updated = await apiRequest(`/api/v1/items/${payload.id}`, {
         method: 'PATCH',
         auth: true,
@@ -322,6 +360,9 @@ export function createFastApiBackend() {
         ...payload,
         name: updated.name,
         isActive: updated.is_active,
+        emoji: extractVisualFromAttributes(updated.attributes_json).emoji,
+        color: extractVisualFromAttributes(updated.attributes_json).color,
+        attributesJson: updated.attributes_json || item?.attributesJson || null,
       };
       const items = state.items.map((i) => (i.id === payload.id ? merged : i));
       return { ok: true, data: { items } };

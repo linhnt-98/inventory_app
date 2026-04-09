@@ -1000,6 +1000,75 @@ input, select, button, textarea {
   border-color: var(--primary);
 }
 
+.item-visual-picker {
+  margin-top: 14px;
+}
+
+.item-visual-picker .modal-label {
+  margin-top: 12px;
+}
+
+.visual-icon-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.visual-icon-btn {
+  height: 38px;
+  border: 1.5px solid var(--gray-200);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.visual-icon-btn.active {
+  border-color: var(--primary);
+  background: var(--green-50);
+}
+
+.visual-color-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.visual-color-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+
+.visual-color-btn.active {
+  border-color: var(--gray-700);
+}
+
+.visual-preview-row {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.visual-preview-label {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.visual-preview-chip {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+}
+
 /* Quantity control */
 .quantity-control {
   display: flex;
@@ -1530,6 +1599,17 @@ input, select, button, textarea {
   background: var(--surface);
   border: 1px solid var(--gray-200);
   border-radius: var(--radius-sm);
+}
+
+.manage-item-thumb {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 1.05rem;
 }
 
 .manage-item-info {
